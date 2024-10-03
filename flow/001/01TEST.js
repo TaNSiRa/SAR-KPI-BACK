@@ -17,10 +17,11 @@ router.post('/MKTKPI/test', async (req, res) => {
   console.log(req.body);
   let input = req.body;
   //-------------------------------------
+  let date = Date.now()
 
 
   //-------------------------------------
-  return res.json(input);
+  return res.json(date);
 });
 
 router.post('/MKTKPI/getdata', async (req, res) => {
@@ -34,7 +35,7 @@ router.post('/MKTKPI/getdata', async (req, res) => {
 
   // console.log(query)
   let db = await mssql.qurey(query);
-  if(db["recordsets"].length >0 ){
+  if (db["recordsets"].length > 0) {
     let buffer = db["recordsets"][0];
     let uniqueData = Array.from(new Map(buffer.map(item => [item['CustShort'], item])).values());
     output = uniqueData;
@@ -71,6 +72,57 @@ router.post('/MKTKPI/UPDATETYPEGROUP', async (req, res) => {
   return res.json(output);
 });
 
+
+router.post('/MKTKPI/HOLLIDAYCOUNT', async (req, res) => {
+  //-------------------------------------
+  console.log("--MKTKPI/HOLLIDAYCOUNT--");
+  console.log(req.body);
+  let input = req.body;
+  //-------------------------------------
+  //input['PDAY']
+  let output = { "status": "NOK" };
+  if (input['DD'] !== undefined && input['MM'] !== undefined && input['YYYY'] !== undefined && input['PDAY'] !== undefined) {
+    let DD = input['DD']
+    let MM = input['MM']
+    let YYYY = input['YYYY']
+
+    let dayfor = parseInt(input['PDAY']) + 1
+    let date = new Date(`${MM}-${DD}-${YYYY}`);
+
+    // console.log(date.getDate())
+    // console.log(date.getMonth())
+    // console.log(date.getFullYear())
+
+    for (let i = 0; i < dayfor; i++) {
+
+      let datain = [];
+
+      try {
+        do {
+          let query = `SELECT * FROM [SAR].[dbo].[Master_Holiday] where HolidayDate = '${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}'`
+          console.log(query)
+          let db = await mssql.qurey(query);
+          datain = db["recordsets"][0]
+          console.log(datain)
+          console.log(datain.length)
+          date.setDate(date.getDate() + 1);
+          console.log(date)
+          output['nextday'] = date;
+        }
+        while (datain.length > 0);
+      } catch (error) {
+
+      }
+
+    }
+
+  }
+
+
+
+  //-------------------------------------
+  return res.json(output);
+});
 
 
 module.exports = router;
