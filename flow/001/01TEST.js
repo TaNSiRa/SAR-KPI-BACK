@@ -55,11 +55,11 @@ router.post('/MKTKPI/UPDATETYPEGROUP', async (req, res) => {
   let input = req.body;
   //-------------------------------------
   let output = 'NOK';
-  if(input["TYPE"] !== undefined&&input["GROUP"] !== undefined&&input["Id"] !== undefined&&input["MKTGROUP"] !== undefined&&input["FRE"] !== undefined){
+  if(input["TYPE"] !== undefined&&input["GROUP"] !== undefined&&input["Id"] !== undefined&&input["MKTGROUP"] !== undefined&&input["FRE"] !== undefined&&input["REPORTITEMS"] !== undefined){
 
 
  
-  let query = `UPDATE  [SAR].[dbo].[Routine_MasterPatternTS] SET [TYPE] ='${input["TYPE"]}' , [GROUP] ='${input["GROUP"]}' , [MKTGROUP] ='${input["MKTGROUP"]}', [FRE] ='${input["FRE"]}' WHERE [Id]=${input["Id"]}`
+  let query = `UPDATE  [SAR].[dbo].[Routine_MasterPatternTS] SET [TYPE] ='${input["TYPE"]}' , [GROUP] ='${input["GROUP"]}' , [MKTGROUP] ='${input["MKTGROUP"]}', [REPORTITEMS] ='${input["REPORTITEMS"]}' WHERE [Id]=${input["Id"]}`
 
   console.log(query)
   let db = await mssql.qurey(query);
