@@ -59,7 +59,7 @@ router.post('/MKTKPI/UPDATETYPEGROUP', async (req, res) => {
 
 
  
-  let query = `UPDATE  [SAR].[dbo].[Routine_MasterPatternTS] SET [TYPE] ='${input["TYPE"]}' , [GROUP] ='${input["GROUP"]}' , [MKTGROUP] ='${input["MKTGROUP"]}', [REPORTITEMS] ='${input["REPORTITEMS"]}' WHERE [Id]=${input["Id"]}`
+  let query = `UPDATE  [SAR].[dbo].[Routine_MasterPatternTS] SET [TYPE] ='${input["TYPE"]}' , [GROUP] ='${input["GROUP"]}' , [MKTGROUP] ='${input["MKTGROUP"]}' , [FRE] ='${input["FRE"]}', [REPORTITEMS] ='${input["REPORTITEMS"]}' WHERE [Id]=${input["Id"]}`
 
   console.log(query)
   let db = await mssql.qurey(query);
