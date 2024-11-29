@@ -54,11 +54,17 @@ router.post('/MKTKPI/UPDATETYPEGROUP', async (req, res) => {
   console.log(req.body);
   let input = req.body;
   //-------------------------------------
-  let output = 'OK';
-  let query = `UPDATE  [SAR].[dbo].[Routine_MasterPatternTS] SET [TYPE] ='${input["TYPE"]}' , [GROUP] ='${input["GROUP"]}' WHERE [Id]=${input["Id"]}`
+  let output = 'NOK';
+  if(input["TYPE"] !== undefined&&input["GROUP"] !== undefined&&input["Id"] !== undefined&&input["MKTGROUP"] !== undefined&&input["FRE"] !== undefined&&input["REPORTITEMS"] !== undefined){
+
+
+ 
+  let query = `UPDATE  [SAR].[dbo].[Routine_MasterPatternTS] SET [TYPE] ='${input["TYPE"]}' , [GROUP] ='${input["GROUP"]}' , [MKTGROUP] ='${input["MKTGROUP"]}' , [FRE] ='${input["FRE"]}', [REPORTITEMS] ='${input["REPORTITEMS"]}' WHERE [Id]=${input["Id"]}`
 
   console.log(query)
   let db = await mssql.qurey(query);
+  let output = 'OK';
+  }
   // if(db["recordsets"].length >0 ){
   //   let buffer = db["recordsets"][0];
   //   let uniqueData = Array.from(new Map(buffer.map(item => [item['CustShort'], item])).values());
