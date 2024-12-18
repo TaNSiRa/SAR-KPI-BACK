@@ -84,8 +84,8 @@ router.get('/mongotest', async (req, res) => {
 router.get('/testreq', async (req, res) => {
 
   data = { "test": "haha" }
-  var output = await httpreq.post('http://127.0.0.1:7510/testpost', data)
-  // var output = await httpreq.get('http://127.0.0.1:7510/testpost')
+  var output = await httpreq.post('http://172.23.10.51:7510/testpost', data)
+  // var output = await httpreq.get('http://172.23.10.51:7510/testpost')
   return res.send(output)
 })
 
@@ -112,18 +112,18 @@ router.get('/fntest2', async (req, res) => {
 
 router.get('/posthttptest', async (req, res) => {
   output = '';
-   request.post(
-        'http://172.101.1.19/API_QcReport/ZBAPI_getZPPIN013_OUT',
-        { json: input },
-         function  (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                // console.log(body2);
-                // if (body2 === 'OK') {
-                     output = body;
-                // }
-            }
-        }
-    );
+  request.post(
+    'http://172.101.1.19/API_QcReport/ZBAPI_getZPPIN013_OUT',
+    { json: input },
+    function (error, response, body) {
+      if (!error && response.statusCode == 200) {
+        // console.log(body2);
+        // if (body2 === 'OK') {
+        output = body;
+        // }
+      }
+    }
+  );
   return res.send(`${output}`)
 });
 
@@ -132,10 +132,10 @@ router.get('/postaxiostest', async (req, res) => {
   output = '';
   try {
     let resp = await axios.post('http://172.101.1.19/API_QcReport/ZBAPI_getZPPIN013_OUT', {
-      "IMP_PRCTR":"24000",
-      "IMP_WERKS":"2100",
-      "LAST_DATE":"01-01-2022",
-      "LAST_TIME":"15:30:10"
+      "IMP_PRCTR": "24000",
+      "IMP_WERKS": "2100",
+      "LAST_DATE": "01-01-2022",
+      "LAST_TIME": "15:30:10"
     });
     // return resp.data;
     console.log(resp.data);
