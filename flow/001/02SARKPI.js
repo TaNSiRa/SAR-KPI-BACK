@@ -8,6 +8,7 @@ var axios = require('axios');
 const e = require("express");
 const schedule = require("node-schedule");
 
+const currentDateTime = formatDateTime(new Date().toISOString());
 
 router.get('/02SARKPI/TEST', async (req, res) => {
     // console.log(mssql.qurey())
@@ -132,7 +133,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
             // `;
             const queryMasterPattern = `
             SELECT * From [SAR].[dbo].[Routine_MasterPatternTS]
-            WHERE FRE != '' AND FRE >= 1
+            WHERE FRE != '' AND FRE != '1<'
             ORDER BY CustShort;
         `;
             const dbMaster = await mssql.qurey(queryMasterPattern);
@@ -1137,7 +1138,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
             // `;
             const queryMasterPattern = `
                 SELECT * From [SAR].[dbo].[Routine_MasterPatternTS]
-                WHERE FRE != '' AND FRE >= 1
+                WHERE FRE != '' AND FRE != '1<'
                 ORDER BY CustShort;
             `;
             const dbMaster = await mssql.qurey(queryMasterPattern);
@@ -5337,27 +5338,32 @@ const callAPIsSequentially = async () => {
     const payload = { YEAR: year };
 
     try {
-        console.log("Calling API 1...");
-        const response1 = await axios.post("http://127.0.0.1:14000/02SARKPI/Service", payload);
-        console.log(response1.data);
+        console.log("Calling API 1... " + currentDateTime);
+        const response1 = await axios.post("http://172.23.10.51:14000/02SARKPI/Service", payload);
+        // console.log(response1.data);
+        console.log("API 1 Completed " + currentDateTime);
 
-        console.log("Calling API 2...");
-        const response2 = await axios.post("http://127.0.0.1:14000/02SARKPI/Overdue", payload);
-        console.log(response2.data);
+        console.log("Calling API 2... " + currentDateTime);
+        const response2 = await axios.post("http://172.23.10.51:14000/02SARKPI/Overdue", payload);
+        // console.log(response2.data);
+        console.log("API 2 Completed " + currentDateTime);
 
-        console.log("Calling API 3...");
-        const response3 = await axios.post("http://127.0.0.1:14000/02SARKPI/CustServiceChart", payload);
-        console.log(response3.data);
+        console.log("Calling API 3... " + currentDateTime);
+        const response3 = await axios.post("http://172.23.10.51:14000/02SARKPI/CustServiceChart", payload);
+        // console.log(response3.data);
+        console.log("API 3 Completed " + currentDateTime);
 
-        console.log("Calling API 4...");
-        const response4 = await axios.post("http://127.0.0.1:14000/02SARKPI/ReportOverKPIChart", payload);
-        console.log(response4.data);
+        console.log("Calling API 4... " + currentDateTime);
+        const response4 = await axios.post("http://172.23.10.51:14000/02SARKPI/ReportOverKPIChart", payload);
+        // console.log(response4.data);
+        console.log("API 4 Completed " + currentDateTime);
 
-        console.log("Calling API 5...");
-        const response5 = await axios.post("http://127.0.0.1:14000/02SARKPI/AchievedCustomer", payload);
-        console.log(response5.data);
+        console.log("Calling API 5... " + currentDateTime);
+        const response5 = await axios.post("http://172.23.10.51:14000/02SARKPI/AchievedCustomer", payload);
+        // console.log(response5.data);
+        console.log("API 5 Completed " + currentDateTime);
 
-        console.log("All APIs completed!");
+        console.log("All APIs completed! " + currentDateTime);
     } catch (error) {
         console.error("Error occurred:", error.message);
     }
@@ -5369,5 +5375,25 @@ schedule.scheduleJob("0 0 * * *", () => {
     console.log("Scheduled task started at midnight");
     callAPIsSequentially();
 });
+
+function formatDateTime(isoString) {
+    const date = new Date(isoString);
+
+    // ดึงส่วนของวันที่
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // เดือนเริ่มจาก 0
+    const day = date.getDate().toString().padStart(2, '0');
+
+    // ดึงส่วนของเวลา
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+
+    // จัดรูปแบบวันที่และเวลา
+    const formattedDate = `${year}-${month}-${day}`; // รูปแบบ YYYY-MM-DD
+    const formattedTime = `${hours}:${minutes}:${seconds}`; // รูปแบบ HH:mm:ss
+
+    return `${formattedDate} ${formattedTime}`; // รวมวันที่และเวลา
+}
 
 module.exports = router;
