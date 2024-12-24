@@ -110,18 +110,25 @@ router.post('/02SARKPI/AchievedCustomerSelect', async (req, res) => {
 });
 
 router.post('/02SARKPI/Service', async (req, res) => {
-    console.log("--02SARKPI/Service--");
-    console.log("Start " + formatDateTime(new Date().toISOString()));
     let input = req.body;
+    console.log("--02SARKPI/Service--");
     console.log(input);
+    console.log("Start " + formatDateTime(new Date().toISOString()));
 
     let SET01 = [];
     let output = [];
-
+    await loadRoutineKACReport();
+    await loadHolidays();
     if (input['YEAR'] != undefined) {
         for (let p = 0; p < 12; p++) {
             let Round = (p + 1).toString().padStart(2, '0');
+            const currentMonth = new Date().getMonth() + 1;
+            const month3 = currentMonth.toString().padStart(2, '0');
+            const month2 = ((currentMonth - 1 + 12) % 12 || 12).toString().padStart(2, '0');
+            const month1 = ((currentMonth - 2 + 12) % 12 || 12).toString().padStart(2, '0');
             const year = input['YEAR'];
+            const year2 = currentMonth === 1 ? year - 1 : year;
+            const year1 = currentMonth <= 2 ? year - 1 : year;
             const month = input['MONTH'];
             const mktGroup = input['MKTGROUP'];
 
@@ -151,6 +158,14 @@ router.post('/02SARKPI/Service', async (req, res) => {
             AND RequestStatus != 'CANCEL REQUEST'
             ORDER BY CustShort, SamplingDate;
             `;
+            // const queryRequestLab = `
+            // SELECT * FROM [SAR].[dbo].[Routine_RequestLab] 
+            // WHERE (MONTH(SamplingDate) = '${month3}' AND YEAR(SamplingDate) = '${year}')
+            // OR (MONTH(SamplingDate) = '${month2}' AND YEAR(SamplingDate) = '${year2}')
+            // OR (MONTH(SamplingDate) = '${month1}' AND YEAR(SamplingDate) = '${year1}')
+            // AND RequestStatus != 'CANCEL REQUEST'
+            // ORDER BY CustShort, SamplingDate;
+            // `;
             const dbRequestLab = await mssql.qurey(queryRequestLab);
 
             if (dbMaster.recordsets.length > 0 && dbRequestLab.recordsets.length > 0) {
@@ -404,7 +419,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                     "Stage4": "",
                     "Reason4": ""
                 }));
-                console.log((p + 1) + " AllCustomer: " + SET01.length)
+                console.log('Month ' + (p + 1) + " AllCustomer: " + SET01.length)
                 console.log("On process...");
 
                 let lastcustshort = "";
@@ -417,6 +432,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                     let lastWeek = 0;
 
                     for (let j = 0; j < matchingRequests.length; j++) {
+                        // console.log(j);
                         const req = matchingRequests[j];
                         const samplingDate = new Date(req.SamplingDate);
                         const dayOfMonth = samplingDate.getDate();
@@ -434,22 +450,32 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         // console.log("reqNo: " + reqNo);
                         // console.log("lastreqno: " + lastreqno);
                         // console.log("lastWeek: " + lastWeek);
-                        const queryEvaluation = `
-                        SELECT * FROM [SAR].[dbo].[Routine_KACReport] 
-                        WHERE ReqNo = '${reqNo}';
-                        `;
-                        const dbevaluation = await mssql.qurey(queryEvaluation);
+                        const filteredResults = routineKACData.filter(row => row.ReqNo === reqNo);
 
-                        const evaluationResults = dbevaluation.recordset;
-
-                        const countEvaluation = evaluationResults.length === 0
+                        const countEvaluation = filteredResults.length === 0
                             ? ''
-                            : evaluationResults.reduce((acc, row) => {
+                            : filteredResults.reduce((acc, row) => {
                                 if (['LOW', 'HIGH', 'NOT PASS', 'NG'].includes(row.Evaluation)) {
                                     return acc + 1;
                                 }
                                 return acc;
                             }, 0);
+                        // const queryEvaluation = `
+                        // SELECT * FROM [SAR].[dbo].[Routine_KACReport] 
+                        // WHERE ReqNo = '${reqNo}';
+                        // `;
+                        // const dbevaluation = await mssql.qurey(queryEvaluation);
+
+                        // const evaluationResults = dbevaluation.recordset;
+
+                        // const countEvaluation = evaluationResults.length === 0
+                        //     ? ''
+                        //     : evaluationResults.reduce((acc, row) => {
+                        //         if (['LOW', 'HIGH', 'NOT PASS', 'NG'].includes(row.Evaluation)) {
+                        //             return acc + 1;
+                        //         }
+                        //         return acc;
+                        //     }, 0);
 
                         // console.log('Total count of evaluations (LOW, HIGH, NOT PASS, NG):', countEvaluation);
 
@@ -1109,7 +1135,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                     console.error('Error executing SQL query:', err.message);
                     res.status(500).send('Internal Server Error');
                 }
-                console.log("Success " + formatDateTime(new Date().toISOString()))
+                console.log('Month ' + (p + 1) + " Complete " + formatDateTime(new Date().toISOString()))
                 output = SET01;
             }
         }
@@ -1118,18 +1144,25 @@ router.post('/02SARKPI/Service', async (req, res) => {
 });
 
 router.post('/02SARKPI/Overdue', async (req, res) => {
-    console.log("--02SARKPI/Overdue--");
-    console.log("Start " + formatDateTime(new Date().toISOString()));
     let input = req.body;
+    console.log("--02SARKPI/Overdue--");
     console.log(input);
+    console.log("Start " + formatDateTime(new Date().toISOString()));
 
     let SET01 = [];
     let output = [];
-
+    await loadRoutineKACReport();
+    await loadHolidays();
     if (input['YEAR'] != undefined) {
         for (let p = 0; p < 12; p++) {
             let Round = (p + 1).toString().padStart(2, '0');
+            const currentMonth = new Date().getMonth() + 1;
+            const month3 = currentMonth.toString().padStart(2, '0');
+            const month2 = ((currentMonth - 1 + 12) % 12 || 12).toString().padStart(2, '0');
+            const month1 = ((currentMonth - 2 + 12) % 12 || 12).toString().padStart(2, '0');
             const year = input['YEAR'];
+            const year2 = currentMonth === 1 ? year - 1 : year;
+            const year1 = currentMonth <= 2 ? year - 1 : year;
             const month = input['MONTH'];
             const mktGroup = input['MKTGROUP'];
 
@@ -1159,6 +1192,14 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
             AND RequestStatus != 'CANCEL REQUEST'
             ORDER BY CustShort, SamplingDate;
             `;
+            // const queryRequestLab = `
+            // SELECT * FROM [SAR].[dbo].[Routine_RequestLab] 
+            // WHERE (MONTH(SamplingDate) = '${month3}' AND YEAR(SamplingDate) = '${year}')
+            // OR (MONTH(SamplingDate) = '${month2}' AND YEAR(SamplingDate) = '${year2}')
+            // OR (MONTH(SamplingDate) = '${month1}' AND YEAR(SamplingDate) = '${year1}')
+            // AND RequestStatus != 'CANCEL REQUEST'
+            // ORDER BY CustShort, SamplingDate;
+            // `;
             const dbRequestLab = await mssql.qurey(queryRequestLab);
 
             if (dbMaster.recordsets.length > 0 && dbRequestLab.recordsets.length > 0) {
@@ -1413,7 +1454,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                     "Reason4": ""
                 }));
 
-                console.log((p + 1) + " AllCustomer: " + SET01.length)
+                console.log('Month ' + (p + 1) + " AllCustomer: " + SET01.length)
                 console.log("On process...");
 
                 let lastcustshort = "";
@@ -1453,20 +1494,21 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                                 return currentResultApproveDate > maxDate ? currentResultApproveDate : maxDate;
                             }, new Date(req.ResultApproveDate));
 
-                        const queryIssueDate = `
-                            SELECT * FROM [SAR].[dbo].[Routine_KACReport] 
-                            WHERE ReqNo = '${reqNo}';
-                        `;
+                        // const queryIssueDate = `
+                        //     SELECT * FROM [SAR].[dbo].[Routine_KACReport] 
+                        //     WHERE ReqNo = '${reqNo}';
+                        // `;
 
-                        const dbIssueDate = await mssql.qurey(queryIssueDate);
+                        // const dbIssueDate = await mssql.qurey(queryIssueDate);
 
-                        const issueData = dbIssueDate &&
-                            dbIssueDate.recordsets &&
-                            dbIssueDate.recordsets.length > 0 &&
-                            dbIssueDate.recordsets[0].length > 0
-                            ? dbIssueDate.recordsets[0][0]
-                            : {};
-
+                        // const issueData = dbIssueDate &&
+                        //     dbIssueDate.recordsets &&
+                        //     dbIssueDate.recordsets.length > 0 &&
+                        //     dbIssueDate.recordsets[0].length > 0
+                        //     ? dbIssueDate.recordsets[0][0]
+                        //     : {};
+                        const filteredResults = routineKACData.filter(row => row.ReqNo === reqNo);
+                        const issueData = filteredResults.length > 0 ? filteredResults[0] : {};
                         //     const queryIssueDate = `
                         // SELECT * FROM [SAR].[dbo].[Routine_KACReport] 
                         // WHERE ReqNo = '${reqNo}';
@@ -2358,7 +2400,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                     console.error('Error executing SQL query:', err.message);
                     res.status(500).send('Internal Server Error');
                 }
-                console.log("Success " + formatDateTime(new Date().toISOString()))
+                console.log('Month ' + (p + 1) + " Complete " + formatDateTime(new Date().toISOString()))
                 output = SET01;
             }
         }
@@ -2367,11 +2409,11 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
 });
 
 router.post('/02SARKPI/CustServiceChart', async (req, res) => {
+    let input = req.body;
     console.log("--02SARKPI/CustServiceChart--");
+    console.log(input);
     console.log("Start " + formatDateTime(new Date().toISOString()));
     console.log("On process...");
-    let input = req.body;
-    console.log(input);
 
     let SET01 = [];
     let output = [];
@@ -2732,10 +2774,10 @@ router.post('/02SARKPI/CustServiceChart', async (req, res) => {
                         WHERE [CustShort] = '${SET01[i].CustShort}' 
                         AND [Month] = '${SET01[i].Month}' 
                         AND [Year] = '${SET01[i].Year}'
-                        AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                        AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                        AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                        AND [ReqNo4] = '${SET01[i].ReqNo4}'`;
+                        AND ([ReqNo1] = '${SET01[i].ReqNo1}'
+                        OR [ReqNo2] = '${SET01[i].ReqNo2}'
+                        OR [ReqNo3] = '${SET01[i].ReqNo3}'
+                        OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
                 const result = await mssql.qurey(queryCheck);
                 // console.log('queryCheck:' + queryCheck);
                 if (result.recordset[0].count > 0) {
@@ -3248,26 +3290,33 @@ router.post('/02SARKPI/CustServiceChart', async (req, res) => {
             console.error('Error executing SQL query:', err.message);
             res.status(500).send('Internal Server Error');
         }
-        console.log("Success " + formatDateTime(new Date().toISOString()))
+        console.log("Complete " + formatDateTime(new Date().toISOString()))
         output = SET01;
     }
     return res.json(output);
 });
 
 router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
-    console.log("--02SARKPI/ReportOverKPIChart--");
-    console.log("Start " + formatDateTime(new Date().toISOString()));
     let input = req.body;
+    console.log("--02SARKPI/ReportOverKPIChart--");
     console.log(input);
+    console.log("Start " + formatDateTime(new Date().toISOString()));
 
     let SET01 = [];
     let output = [];
-
+    await loadRoutineKACReport();
+    await loadHolidays();
     if (input['YEAR'] != undefined) {
         for (let p = 0; p < 12; p++) {
             let Round = (p + 1).toString().padStart(2, '0');
-            const type = input['TYPE'];
+            const currentMonth = new Date().getMonth() + 1;
+            const month3 = currentMonth.toString().padStart(2, '0');
+            const month2 = ((currentMonth - 1 + 12) % 12 || 12).toString().padStart(2, '0');
+            const month1 = ((currentMonth - 2 + 12) % 12 || 12).toString().padStart(2, '0');
             const year = input['YEAR'];
+            const year2 = currentMonth === 1 ? year - 1 : year;
+            const year1 = currentMonth <= 2 ? year - 1 : year;
+            const type = input['TYPE'];
             const month = input['MONTH'];
 
             const queryMasterPattern = `
@@ -3283,6 +3332,14 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
             AND YEAR(SamplingDate) = '${year}'
             ORDER BY CustShort, SamplingDate;
             `;
+            // const queryRequestLab = `
+            // SELECT * FROM [SAR].[dbo].[Routine_RequestLab] 
+            // WHERE (MONTH(SamplingDate) = '${month3}' AND YEAR(SamplingDate) = '${year}')
+            // OR (MONTH(SamplingDate) = '${month2}' AND YEAR(SamplingDate) = '${year2}')
+            // OR (MONTH(SamplingDate) = '${month1}' AND YEAR(SamplingDate) = '${year1}')
+            // AND RequestStatus != 'CANCEL REQUEST'
+            // ORDER BY CustShort, SamplingDate;
+            // `;
             const dbRequestLab = await mssql.qurey(queryRequestLab);
 
             if (dbMaster.recordsets.length > 0 && dbRequestLab.recordsets.length > 0) {
@@ -3537,7 +3594,7 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                     "Reason4": ""
                 }));
 
-                console.log((p + 1) + " AllCustomer: " + SET01.length)
+                console.log('Month ' + (p + 1) + " AllCustomer: " + SET01.length)
                 console.log("On process...");
 
                 let lastcustshort = "";
@@ -3576,18 +3633,21 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                                 return currentResultApproveDate > maxDate ? currentResultApproveDate : maxDate;
                             }, new Date(req.ResultApproveDate));
 
-                        const queryIssueDate = `
-                    SELECT * FROM [SAR].[dbo].[Routine_KACReport] 
-                    WHERE ReqNo = '${reqNo}';
-                    `;
-                        const dbIssueDate = await mssql.qurey(queryIssueDate);
+                        // const queryIssueDate = `
+                        // SELECT * FROM [SAR].[dbo].[Routine_KACReport] 
+                        // WHERE ReqNo = '${reqNo}';
+                        // `;
+                        // const dbIssueDate = await mssql.qurey(queryIssueDate);
 
-                        const issueData = dbIssueDate &&
-                            dbIssueDate.recordsets &&
-                            dbIssueDate.recordsets.length > 0 &&
-                            dbIssueDate.recordsets[0].length > 0
-                            ? dbIssueDate.recordsets[0][0]
-                            : {};
+                        // const issueData = dbIssueDate &&
+                        //     dbIssueDate.recordsets &&
+                        //     dbIssueDate.recordsets.length > 0 &&
+                        //     dbIssueDate.recordsets[0].length > 0
+                        //     ? dbIssueDate.recordsets[0][0]
+                        //     : {};
+
+                        const filteredResults = routineKACData.filter(row => row.ReqNo === reqNo);
+                        const issueData = filteredResults.length > 0 ? filteredResults[0] : {};
                         const issueDate = issueData['CreateReportDate'] ? new Date(issueData['CreateReportDate']) : null;
                         const Sublead = issueData['SubLeaderTime_0'] ? new Date(issueData['SubLeaderTime_0']) : null;
                         const GL = issueData['GLTime_0'] ? new Date(issueData['GLTime_0']) : null;
@@ -4358,7 +4418,7 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                     console.error('Error executing SQL query:', err.message);
                     res.status(500).send('Internal Server Error');
                 }
-                console.log("Success " + formatDateTime(new Date().toISOString()))
+                console.log('Month ' + (p + 1) + " Complete " + formatDateTime(new Date().toISOString()))
                 output = SET01;
             }
         }
@@ -4367,16 +4427,17 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
 });
 
 router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
+    let input = req.body;
     console.log("--02SARKPI/AchievedCustomer--");
+    console.log(input);
     console.log("Start " + formatDateTime(new Date().toISOString()));
     console.log("On process...");
-    let input = req.body;
-    console.log(input);
 
     let SET01 = [];
     let output = [];
     let previousReqNo = null;
 
+    await loadHolidays();
     if (input['YEAR'] != undefined) {
         const type = input['TYPE'];
         const year = input['YEAR'];
@@ -4410,8 +4471,9 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
                 RepItems: record.REPORTITEMS
             };
         };
-
+        // console.log(requestRecords.length);
         for (let i = 0; i < requestRecords.length; i++) {
+            // console.log(i);
             const req = requestRecords[i];
             const samplingDate = new Date(req.SamplingDate);
             const dayOfMonth = samplingDate.getDate();
@@ -4664,6 +4726,8 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
             const sentRepDate = new Date(req.SentRep);
             const RepDue = await calculateRepDue(samplingDate, kpiPeriod);
             const RepDays = await calculateBusinessDays(samplingDate, sentRepDate);
+            // const RepDue = 'Test';
+            // const RepDays = 'Test';
             const reqNo = req.ReqNo;
             const CloseLine = req.RequestStatus;
 
@@ -4779,10 +4843,10 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
                         WHERE [CustShort] = '${SET01[i].CustShort}' 
                         AND [Month] = '${SET01[i].Month}' 
                         AND [Year] = '${SET01[i].Year}'
-                        AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                        AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                        AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                        AND [ReqNo4] = '${SET01[i].ReqNo4}'`;
+                        AND ([ReqNo1] = '${SET01[i].ReqNo1}'
+                        OR [ReqNo2] = '${SET01[i].ReqNo2}'
+                        OR [ReqNo3] = '${SET01[i].ReqNo3}'
+                        OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
                 const result = await mssql.qurey(queryCheck);
                 // console.log('queryCheck:' + queryCheck);
                 if (result.recordset[0].count > 0) {
@@ -5295,39 +5359,96 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
             console.error('Error executing SQL query:', err.message);
             res.status(500).send('Internal Server Error');
         }
-        console.log("Success " + formatDateTime(new Date().toISOString()))
+        console.log("Complete " + formatDateTime(new Date().toISOString()))
         output = SET01;
     }
     return res.json(output);
 });
+
+let routineKACData = [];
+async function loadRoutineKACReport() {
+    const query = `SELECT * FROM [SAR].[dbo].[Routine_KACReport]`;
+    try {
+        const db = await mssql.qurey(query);
+        routineKACData = db.recordset || [];
+        // console.log("Routine KAC Report loaded:", routineKACData.length, "records");
+    } catch (error) {
+        console.error("Error loading Routine KAC Report data:", error);
+        routineKACData = [];
+    }
+}
+
+let holidays = null;
+async function loadHolidays() {
+    const query = `SELECT HolidayDate FROM [SAR].[dbo].[Master_Holiday]`;
+    try {
+        let db = await mssql.qurey(query);
+        if (db && db.recordsets && db.recordsets[0]) {
+            holidays = new Set(db.recordsets[0].map(record => record.HolidayDate.toISOString().split('T')[0]));
+            // console.log("Holidays loaded:", holidays);
+        }
+    } catch (error) {
+        console.error("Error loading holidays:", error);
+        holidays = new Set();
+    }
+}
+
+// async function calculateRepDue(startDate, addDays) {
+//     let output = { "RepDue": null };
+//     let date = new Date(startDate);
+//     let addedDays = 0;
+
+//     if (addDays === null || addDays === '') {
+//         return { "RepDue": "" };
+//     }
+
+//     while (addedDays < addDays) {
+//         let query = `SELECT * FROM [SAR].[dbo].[Master_Holiday] WHERE HolidayDate = '${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}'`;
+//         try {
+//             let db = await mssql.qurey(query);
+//             let isHoliday = false;
+
+//             if (db && db.recordsets && db.recordsets[0]) {
+//                 isHoliday = db.recordsets[0].length > 0;
+//             } else {
+//                 // console.warn("No recordsets found for query:", query);
+//             }
+
+//             if (!isHoliday) {
+//                 addedDays++;
+//             }
+//         } catch (error) {
+//             console.error("Database query failed:", error);
+//             throw error;
+//         }
+
+//         date.setDate(date.getDate() + 1);
+//     }
+
+//     output['RepDue'] = formatDate(date);
+//     return output;
+// }
 
 async function calculateRepDue(startDate, addDays) {
     let output = { "RepDue": null };
     let date = new Date(startDate);
     let addedDays = 0;
 
+    if (!holidays) {
+        throw new Error("Holidays data has not been loaded. Please call loadHolidays() first.");
+    }
+
     if (addDays === null || addDays === '') {
         return { "RepDue": "" };
     }
 
     while (addedDays < addDays) {
-        let query = `SELECT * FROM [SAR].[dbo].[Master_Holiday] WHERE HolidayDate = '${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}'`;
-        try {
-            let db = await mssql.qurey(query);
-            let isHoliday = false;
+        const currentDate = date.toISOString().split('T')[0];
 
-            if (db && db.recordsets && db.recordsets[0]) {
-                isHoliday = db.recordsets[0].length > 0;
-            } else {
-                // console.warn("No recordsets found for query:", query);
-            }
+        const isHoliday = holidays.has(currentDate);
 
-            if (!isHoliday) {
-                addedDays++;
-            }
-        } catch (error) {
-            console.error("Database query failed:", error);
-            throw error;
+        if (!isHoliday) {
+            addedDays++;
         }
 
         date.setDate(date.getDate() + 1);
@@ -5337,6 +5458,47 @@ async function calculateRepDue(startDate, addDays) {
     return output;
 }
 
+// async function calculateBusinessDays(startDate, endDate) {
+//     let count = 0;
+//     let SetstartDate = new Date(startDate);
+//     SetstartDate.setHours(0, 0, 0, 0);
+//     let SetendDate = new Date(endDate);
+//     SetendDate.setHours(0, 0, 0, 0);
+
+//     if (startDate === null || startDate.getTime() === 0 || startDate.getTime() === '' || endDate === null || endDate.getTime() === 0 || endDate.getTime() === '') {
+//         return "";
+//     }
+
+//     while (SetstartDate < SetendDate) {
+//         let query = `
+//         SELECT * FROM [SAR].[dbo].[Master_Holiday] 
+//         WHERE HolidayDate = '${SetstartDate.getFullYear()}-${SetstartDate.getMonth() + 1}-${SetstartDate.getDate()}'
+//         `;
+//         // console.log('query: ' + query);
+//         try {
+//             let db = await mssql.qurey(query);
+//             let isHoliday = false;
+
+//             if (db && db.recordsets && db.recordsets.length > 0 && db.recordsets[0]) {
+//                 isHoliday = db.recordsets[0].length > 0;
+//             } else {
+//                 // console.warn("No recordsets found for query:", query);
+//             }
+
+//             if (!isHoliday) {
+//                 count++;
+//             }
+//         } catch (error) {
+//             console.error("Database query failed:", error);
+//             throw error;
+//         }
+//         SetstartDate.setDate(SetstartDate.getDate() + 1);
+//     }
+//     if (count < 0) {
+//         count = 0;
+//     }
+//     return count;
+// }
 
 async function calculateBusinessDays(startDate, endDate) {
     let count = 0;
@@ -5345,32 +5507,21 @@ async function calculateBusinessDays(startDate, endDate) {
     let SetendDate = new Date(endDate);
     SetendDate.setHours(0, 0, 0, 0);
 
+    if (!holidays) {
+        throw new Error("Holidays data has not been loaded. Please call loadHolidays() first.");
+    }
+
     if (startDate === null || startDate.getTime() === 0 || startDate.getTime() === '' || endDate === null || endDate.getTime() === 0 || endDate.getTime() === '') {
         return "";
     }
 
     while (SetstartDate < SetendDate) {
-        let query = `
-        SELECT * FROM [SAR].[dbo].[Master_Holiday] 
-        WHERE HolidayDate = '${SetstartDate.getFullYear()}-${SetstartDate.getMonth() + 1}-${SetstartDate.getDate()}'
-        `;
-        // console.log('query: ' + query);
-        try {
-            let db = await mssql.qurey(query);
-            let isHoliday = false;
+        const currentDate = SetstartDate.toISOString().split('T')[0];
 
-            if (db && db.recordsets && db.recordsets.length > 0 && db.recordsets[0]) {
-                isHoliday = db.recordsets[0].length > 0;
-            } else {
-                // console.warn("No recordsets found for query:", query);
-            }
+        const isHoliday = holidays.has(currentDate);
 
-            if (!isHoliday) {
-                count++;
-            }
-        } catch (error) {
-            console.error("Database query failed:", error);
-            throw error;
+        if (!isHoliday) {
+            count++;
         }
         SetstartDate.setDate(SetstartDate.getDate() + 1);
     }
@@ -5396,27 +5547,27 @@ const callAPIsSequentially = async () => {
 
     try {
         console.log("Calling API 1... " + formatDateTime(new Date().toISOString()));
-        const response1 = await axios.post("http://127.0.0.1:14000/02SARKPI/Service", payload);
+        const response1 = await axios.post("http://172.23.10.51:14000/02SARKPI/Service", payload);
         // console.log(response1.data);
         console.log("API 1 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 2... " + formatDateTime(new Date().toISOString()));
-        const response2 = await axios.post("http://127.0.0.1:14000/02SARKPI/Overdue", payload);
+        const response2 = await axios.post("http://172.23.10.51:14000/02SARKPI/Overdue", payload);
         // console.log(response2.data);
         console.log("API 2 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 3... " + formatDateTime(new Date().toISOString()));
-        const response3 = await axios.post("http://127.0.0.1:14000/02SARKPI/CustServiceChart", payload);
+        const response3 = await axios.post("http://172.23.10.51:14000/02SARKPI/CustServiceChart", payload);
         // console.log(response3.data);
         console.log("API 3 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 4... " + formatDateTime(new Date().toISOString()));
-        const response4 = await axios.post("http://127.0.0.1:14000/02SARKPI/ReportOverKPIChart", payload);
+        const response4 = await axios.post("http://172.23.10.51:14000/02SARKPI/ReportOverKPIChart", payload);
         // console.log(response4.data);
         console.log("API 4 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 5... " + formatDateTime(new Date().toISOString()));
-        const response5 = await axios.post("http://127.0.0.1:14000/02SARKPI/AchievedCustomer", payload);
+        const response5 = await axios.post("http://172.23.10.51:14000/02SARKPI/AchievedCustomer", payload);
         // console.log(response5.data);
         console.log("API 5 Completed " + formatDateTime(new Date().toISOString()));
 
@@ -5436,21 +5587,18 @@ schedule.scheduleJob("0 0 * * *", () => {
 function formatDateTime(isoString) {
     const date = new Date(isoString);
 
-    // ดึงส่วนของวันที่
     const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // เดือนเริ่มจาก 0
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
 
-    // ดึงส่วนของเวลา
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     const seconds = date.getSeconds().toString().padStart(2, '0');
 
-    // จัดรูปแบบวันที่และเวลา
-    const formattedDate = `${year}-${month}-${day}`; // รูปแบบ YYYY-MM-DD
-    const formattedTime = `${hours}:${minutes}:${seconds}`; // รูปแบบ HH:mm:ss
+    const formattedDate = `${year}-${month}-${day}`;
+    const formattedTime = `${hours}:${minutes}:${seconds}`;
 
-    return `${formattedDate} ${formattedTime}`; // รวมวันที่และเวลา
+    return `${formattedDate} ${formattedTime}`;
 }
 
 module.exports = router;
