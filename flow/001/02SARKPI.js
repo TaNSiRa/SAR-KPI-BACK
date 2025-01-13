@@ -120,6 +120,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
     await loadRoutineKACReport();
     await loadHolidays();
     if (input['YEAR'] != undefined) {
+        const queryDelete = `DELETE FROM [SARKPI].[dbo].[KPI_Service] WHERE Year = ${input['YEAR']}`;
+        await mssql.qurey(queryDelete);
         for (let p = 0; p < 12; p++) {
             let Round = (p + 1).toString().padStart(2, '0');
             const currentMonth = new Date().getMonth() + 1;
@@ -175,7 +177,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                 const requestRecordsMap = {};
                 for (let i = 0; i < requestRecords.length; i++) {
                     const req = requestRecords[i];
-                    const custShort = req.CustShort?.trim();
+                    const custShort = req.CustShort;
                     if (custShort) {
                         if (!requestRecordsMap[custShort]) {
                             requestRecordsMap[custShort] = [];
@@ -190,9 +192,9 @@ router.post('/02SARKPI/Service', async (req, res) => {
                     "MKTGroup": record['MKTGROUP'],
                     "Group": record['GROUP'],
                     "Customer": record['CustFull'],
-                    "CustShort": record['CustShort'].trim(),
+                    "CustShort": record['CustShort'],
                     "Frequency": record['FRE'],
-                    "Incharge": record['Incharge'].trim(),
+                    "Incharge": record['Incharge'],
                     "KPIServ": record['GROUP'] === 'KAC' ? '100' : (record['GROUP'] === 'MEDIUM' ? '95' : record['KPIServ']),
                     "KPIPeriod": record['TYPE'] === 'A' ? '12' : (record['TYPE'] === 'B' ? '10' : record['KPIPERIOD']),
                     "RepItems": record['REPORTITEMS'],
@@ -430,7 +432,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                     const custShort = entry.CustShort;
                     const matchingRequests = requestRecordsMap[custShort] || [];
                     let lastWeek = 0;
-
+                    // console.log('Requests: ' + matchingRequests.length);
                     for (let j = 0; j < matchingRequests.length; j++) {
                         // console.log(j);
                         const req = matchingRequests[j];
@@ -480,14 +482,12 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         // console.log('Total count of evaluations (LOW, HIGH, NOT PASS, NG):', countEvaluation);
 
                         let week = 0;
-                        if (dayOfMonth >= 1 && dayOfMonth <= 8) {
+                        if (dayOfMonth >= 1 && dayOfMonth <= 12) {
                             week = 1;
-                        } else if (dayOfMonth >= 9 && dayOfMonth <= 16) {
+                        } else if (dayOfMonth >= 13 && dayOfMonth <= 23) {
                             week = 2;
-                        } else if (dayOfMonth >= 17 && dayOfMonth <= 24) {
+                        } else if (dayOfMonth >= 24 && dayOfMonth <= 31) {
                             week = 3;
-                        } else if (dayOfMonth >= 25 && dayOfMonth <= 31) {
-                            week = 4;
                         }
 
                         if (custshort == lastcustshort && reqNo == lastreqno) {
@@ -496,11 +496,15 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             }
                         }
                         if (custshort == lastcustshort && reqNo != lastreqno) {
+                            if (week < lastWeek) {
+                                week = week + 1;
+                            }
+                        }
+                        if (custshort == lastcustshort && reqNo != lastreqno) {
                             if (week == lastWeek) {
                                 week = lastWeek + 1;
                             }
                         }
-
                         // console.log("week: " + week);
                         switch (week) {
                             case 1:
@@ -616,261 +620,257 @@ router.post('/02SARKPI/Service', async (req, res) => {
                 // }
                 try {
                     for (let i = 0; i < SET01.length; i++) {
-                        const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_Service]
-                            WHERE [CustShort] = '${SET01[i].CustShort}' 
-                            AND [Month] = '${SET01[i].Month}' 
-                            AND [Year] = '${SET01[i].Year}'
-                            AND ([ReqNo1] = '${SET01[i].ReqNo1}'
-                            OR [ReqNo2] = '${SET01[i].ReqNo2}'
-                            OR [ReqNo3] = '${SET01[i].ReqNo3}'
-                            OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
-                        const result = await mssql.qurey(queryCheck);
-                        if (result.recordset[0].count > 0) {
-                            const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Service]
-                                 SET [Type] = '${SET01[i].Type}', 
-                                    [MKTGroup] = '${SET01[i].MKTGroup}', 
-                                    [Group] = '${SET01[i].Group}', 
-                                    [Customer] = '${SET01[i].Customer}', 
-                                    [CustShort] = '${SET01[i].CustShort}', 
-                                    [Frequency] = '${SET01[i].Frequency}', 
-                                    [Incharge] = '${SET01[i].Incharge}', 
-                                    [KPIServ] = '${SET01[i].KPIServ}', 
-                                    [KPIPeriod] = '${SET01[i].KPIPeriod}', 
-                                    [RepItems] = '${SET01[i].RepItems}', 
-                                    [Month] = '${SET01[i].Month}', 
-                                    [Year] = '${SET01[i].Year}', 
-                                    [ReqNo1] = '${SET01[i].ReqNo1}', 
-                                    [Freq1] = '${SET01[i].Freq1}', 
-                                    [Evaluation1] = '${SET01[i].Evaluation1}', 
-                                    [PlanSam1] = '${SET01[i].PlanSam1}', 
-                                    [ActSam1] = '${SET01[i].ActSam1}', 
-                                    [RepDue1] = '${SET01[i].RepDue1}', 
-                                    [SentRep1] = '${SET01[i].SentRep1}', 
-                                    [RepDays1] = '${SET01[i].RepDays1}', 
-                                    [Request1] = '${SET01[i].Request1}', 
-                                    [TTCResult1] = '${SET01[i].TTCResult1}', 
-                                    [IssueDate1] = '${SET01[i].IssueDate1}', 
-                                    [Sublead1] = '${SET01[i].Sublead1}', 
-                                    [GL1] = '${SET01[i].GL1}', 
-                                    [MGR1] = '${SET01[i].MGR1}', 
-                                    [JP1] = '${SET01[i].JP1}', 
-                                    [Revise1_1] = '${SET01[i].Revise1_1}', 
-                                    [Sublead1_1] = '${SET01[i].Sublead1_1}', 
-                                    [GL1_1] = '${SET01[i].GL1_1}', 
-                                    [MGR1_1] = '${SET01[i].MGR1_1}', 
-                                    [JP1_1] = '${SET01[i].JP1_1}', 
-                                    [Revise1_2] = '${SET01[i].Revise1_2}', 
-                                    [Sublead1_2] = '${SET01[i].Sublead1_2}', 
-                                    [GL1_2] = '${SET01[i].GL1_2}', 
-                                    [MGR1_2] = '${SET01[i].MGR1_2}', 
-                                    [JP1_2] = '${SET01[i].JP1_2}', 
-                                    [Revise1_3] = '${SET01[i].Revise1_3}', 
-                                    [Sublead1_3] = '${SET01[i].Sublead1_3}', 
-                                    [GL1_3] = '${SET01[i].GL1_3}', 
-                                    [MGR1_3] = '${SET01[i].MGR1_3}', 
-                                    [JP1_3] = '${SET01[i].JP1_3}', 
-                                    [BDPrepare1] = '${SET01[i].BDPrepare1}', 
-                                    [BDTTC1] = '${SET01[i].BDTTC1}', 
-                                    [BDIssue1] = '${SET01[i].BDIssue1}', 
-                                    [BDSublead1] = '${SET01[i].BDSublead1}', 
-                                    [BDGL1] = '${SET01[i].BDGL1}', 
-                                    [BDMGR1] = '${SET01[i].BDMGR1}', 
-                                    [BDJP1] = '${SET01[i].BDJP1}', 
-                                    [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
-                                    [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
-                                    [BDGL1_1] = '${SET01[i].BDGL1_1}', 
-                                    [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
-                                    [BDJP1_1] = '${SET01[i].BDJP1_1}', 
-                                    [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
-                                    [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
-                                    [BDGL1_2] = '${SET01[i].BDGL1_2}', 
-                                    [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
-                                    [BDJP1_2] = '${SET01[i].BDJP1_2}', 
-                                    [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
-                                    [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
-                                    [BDGL1_3] = '${SET01[i].BDGL1_3}', 
-                                    [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
-                                    [BDJP1_3] = '${SET01[i].BDJP1_3}', 
-                                    [BDSent1] = '${SET01[i].BDSent1}', 
-                                    [Stage1] = '${SET01[i].Stage1}',
-                                    [Reason1] = '${SET01[i].Reason1}', 
-                                    [ReqNo2] = '${SET01[i].ReqNo2}', 
-                                    [Freq2] = '${SET01[i].Freq2}', 
-                                    [Evaluation2] = '${SET01[i].Evaluation2}', 
-                                    [PlanSam2] = '${SET01[i].PlanSam2}', 
-                                    [ActSam2] = '${SET01[i].ActSam2}', 
-                                    [RepDue2] = '${SET01[i].RepDue2}', 
-                                    [SentRep2] = '${SET01[i].SentRep2}', 
-                                    [RepDays2] = '${SET01[i].RepDays2}', 
-                                    [Request2] = '${SET01[i].Request2}', 
-                                    [TTCResult2] = '${SET01[i].TTCResult2}', 
-                                    [IssueDate2] = '${SET01[i].IssueDate2}', 
-                                    [Sublead2] = '${SET01[i].Sublead2}', 
-                                    [GL2] = '${SET01[i].GL2}', 
-                                    [MGR2] = '${SET01[i].MGR2}', 
-                                    [JP2] = '${SET01[i].JP2}', 
-                                    [Revise2_1] = '${SET01[i].Revise2_1}', 
-                                    [Sublead2_1] = '${SET01[i].Sublead2_1}', 
-                                    [GL2_1] = '${SET01[i].GL2_1}', 
-                                    [MGR2_1] = '${SET01[i].MGR2_1}', 
-                                    [JP2_1] = '${SET01[i].JP2_1}', 
-                                    [Revise2_2] = '${SET01[i].Revise2_2}', 
-                                    [Sublead2_2] = '${SET01[i].Sublead2_2}', 
-                                    [GL2_2] = '${SET01[i].GL2_2}', 
-                                    [MGR2_2] = '${SET01[i].MGR2_2}', 
-                                    [JP2_2] = '${SET01[i].JP2_2}', 
-                                    [Revise2_3] = '${SET01[i].Revise2_3}', 
-                                    [Sublead2_3] = '${SET01[i].Sublead2_3}', 
-                                    [GL2_3] = '${SET01[i].GL2_3}', 
-                                    [MGR2_3] = '${SET01[i].MGR2_3}', 
-                                    [JP2_3] = '${SET01[i].JP2_3}', 
-                                    [BDPrepare2] = '${SET01[i].BDPrepare2}', 
-                                    [BDTTC2] = '${SET01[i].BDTTC2}', 
-                                    [BDIssue2] = '${SET01[i].BDIssue2}', 
-                                    [BDSublead2] = '${SET01[i].BDSublead2}', 
-                                    [BDGL2] = '${SET01[i].BDGL2}', 
-                                    [BDMGR2] = '${SET01[i].BDMGR2}', 
-                                    [BDJP2] = '${SET01[i].BDJP2}', 
-                                    [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
-                                    [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
-                                    [BDGL2_1] = '${SET01[i].BDGL2_1}', 
-                                    [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
-                                    [BDJP2_1] = '${SET01[i].BDJP2_1}', 
-                                    [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
-                                    [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
-                                    [BDGL2_2] = '${SET01[i].BDGL2_2}', 
-                                    [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
-                                    [BDJP2_2] = '${SET01[i].BDJP2_2}', 
-                                    [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
-                                    [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
-                                    [BDGL2_3] = '${SET01[i].BDGL2_3}', 
-                                    [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
-                                    [BDJP2_3] = '${SET01[i].BDJP2_3}', 
-                                    [BDSent2] = '${SET01[i].BDSent2}', 
-                                    [Stage2] = '${SET01[i].Stage2}',
-                                    [Reason2] = '${SET01[i].Reason2}', 
-                                    [ReqNo3] = '${SET01[i].ReqNo3}', 
-                                    [Freq3] = '${SET01[i].Freq3}', 
-                                    [Evaluation3] = '${SET01[i].Evaluation3}', 
-                                    [PlanSam3] = '${SET01[i].PlanSam3}', 
-                                    [ActSam3] = '${SET01[i].ActSam3}', 
-                                    [RepDue3] = '${SET01[i].RepDue3}', 
-                                    [SentRep3] = '${SET01[i].SentRep3}', 
-                                    [RepDays3] = '${SET01[i].RepDays3}', 
-                                    [Request3] = '${SET01[i].Request3}', 
-                                    [TTCResult3] = '${SET01[i].TTCResult3}', 
-                                    [IssueDate3] = '${SET01[i].IssueDate3}', 
-                                    [Sublead3] = '${SET01[i].Sublead3}', 
-                                    [GL3] = '${SET01[i].GL3}', 
-                                    [MGR3] = '${SET01[i].MGR3}', 
-                                    [JP3] = '${SET01[i].JP3}', 
-                                    [Revise3_1] = '${SET01[i].Revise3_1}', 
-                                    [Sublead3_1] = '${SET01[i].Sublead3_1}', 
-                                    [GL3_1] = '${SET01[i].GL3_1}', 
-                                    [MGR3_1] = '${SET01[i].MGR3_1}', 
-                                    [JP3_1] = '${SET01[i].JP3_1}', 
-                                    [Revise3_2] = '${SET01[i].Revise3_2}', 
-                                    [Sublead3_2] = '${SET01[i].Sublead3_2}', 
-                                    [GL3_2] = '${SET01[i].GL3_2}', 
-                                    [MGR3_2] = '${SET01[i].MGR3_2}', 
-                                    [JP3_2] = '${SET01[i].JP3_2}', 
-                                    [Revise3_3] = '${SET01[i].Revise3_3}', 
-                                    [Sublead3_3] = '${SET01[i].Sublead3_3}', 
-                                    [GL3_3] = '${SET01[i].GL3_3}', 
-                                    [MGR3_3] = '${SET01[i].MGR3_3}', 
-                                    [JP3_3] = '${SET01[i].JP3_3}', 
-                                    [BDPrepare3] = '${SET01[i].BDPrepare3}', 
-                                    [BDTTC3] = '${SET01[i].BDTTC3}', 
-                                    [BDIssue3] = '${SET01[i].BDIssue3}', 
-                                    [BDSublead3] = '${SET01[i].BDSublead3}', 
-                                    [BDGL3] = '${SET01[i].BDGL3}', 
-                                    [BDMGR3] = '${SET01[i].BDMGR3}', 
-                                    [BDJP3] = '${SET01[i].BDJP3}', 
-                                    [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
-                                    [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
-                                    [BDGL3_1] = '${SET01[i].BDGL3_1}', 
-                                    [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
-                                    [BDJP3_1] = '${SET01[i].BDJP3_1}', 
-                                    [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
-                                    [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
-                                    [BDGL3_2] = '${SET01[i].BDGL3_2}', 
-                                    [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
-                                    [BDJP3_2] = '${SET01[i].BDJP3_2}', 
-                                    [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
-                                    [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
-                                    [BDGL3_3] = '${SET01[i].BDGL3_3}', 
-                                    [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
-                                    [BDJP3_3] = '${SET01[i].BDJP3_3}', 
-                                    [BDSent3] = '${SET01[i].BDSent3}', 
-                                    [Stage3] = '${SET01[i].Stage3}',
-                                    [Reason3] = '${SET01[i].Reason3}', 
-                                    [ReqNo4] = '${SET01[i].ReqNo4}', 
-                                    [Freq4] = '${SET01[i].Freq4}', 
-                                    [Evaluation4] = '${SET01[i].Evaluation4}', 
-                                    [PlanSam4] = '${SET01[i].PlanSam4}', 
-                                    [ActSam4] = '${SET01[i].ActSam4}', 
-                                    [RepDue4] = '${SET01[i].RepDue4}', 
-                                    [SentRep4] = '${SET01[i].SentRep4}', 
-                                    [RepDays4] = '${SET01[i].RepDays4}', 
-                                    [Request4] = '${SET01[i].Request4}', 
-                                    [TTCResult4] = '${SET01[i].TTCResult4}', 
-                                    [IssueDate4] = '${SET01[i].IssueDate4}', 
-                                    [Sublead4] = '${SET01[i].Sublead4}', 
-                                    [GL4] = '${SET01[i].GL4}', 
-                                    [MGR4] = '${SET01[i].MGR4}', 
-                                    [JP4] = '${SET01[i].JP4}', 
-                                    [Revise4_1] = '${SET01[i].Revise4_1}', 
-                                    [Sublead4_1] = '${SET01[i].Sublead4_1}', 
-                                    [GL4_1] = '${SET01[i].GL4_1}', 
-                                    [MGR4_1] = '${SET01[i].MGR4_1}', 
-                                    [JP4_1] = '${SET01[i].JP4_1}', 
-                                    [Revise4_2] = '${SET01[i].Revise4_2}', 
-                                    [Sublead4_2] = '${SET01[i].Sublead4_2}', 
-                                    [GL4_2] = '${SET01[i].GL4_2}', 
-                                    [MGR4_2] = '${SET01[i].MGR4_2}', 
-                                    [JP4_2] = '${SET01[i].JP4_2}', 
-                                    [Revise4_3] = '${SET01[i].Revise4_3}', 
-                                    [Sublead4_3] = '${SET01[i].Sublead4_3}', 
-                                    [GL4_3] = '${SET01[i].GL4_3}', 
-                                    [MGR4_3] = '${SET01[i].MGR4_3}', 
-                                    [JP4_3] = '${SET01[i].JP4_3}', 
-                                    [BDPrepare4] = '${SET01[i].BDPrepare4}', 
-                                    [BDTTC4] = '${SET01[i].BDTTC4}', 
-                                    [BDIssue4] = '${SET01[i].BDIssue4}', 
-                                    [BDSublead4] = '${SET01[i].BDSublead4}', 
-                                    [BDGL4] = '${SET01[i].BDGL4}', 
-                                    [BDMGR4] = '${SET01[i].BDMGR4}', 
-                                    [BDJP4] = '${SET01[i].BDJP4}', 
-                                    [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
-                                    [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
-                                    [BDGL4_1] = '${SET01[i].BDGL4_1}', 
-                                    [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
-                                    [BDJP4_1] = '${SET01[i].BDJP4_1}', 
-                                    [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
-                                    [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
-                                    [BDGL4_2] = '${SET01[i].BDGL4_2}', 
-                                    [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
-                                    [BDJP4_2] = '${SET01[i].BDJP4_2}', 
-                                    [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
-                                    [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
-                                    [BDGL4_3] = '${SET01[i].GL4_3}', 
-                                    [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
-                                    [BDJP4_3] = '${SET01[i].BDJP4_3}', 
-                                    [BDSent4] = '${SET01[i].BDSent4}',
-                                    [Stage4] = '${SET01[i].Stage4}', 
-                                    [Reason4] = '${SET01[i].Reason4}'
-                                    WHERE [CustShort] = '${SET01[i].CustShort}' 
-                                    AND [Month] = '${SET01[i].Month}' 
-                                    AND [Year] = '${SET01[i].Year}'
-                                    AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                                    AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                                    AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                                    AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
-                            await mssql.qurey(queryUpdate);
-                            // console.log(queryUpdate);
-                            // console.log("Update Complete " + i);
-                        } else {
-                            var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_Service] 
+                        // const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_Service]
+                        //     WHERE [CustShort] = '${SET01[i].CustShort}' 
+                        //     AND [Month] = '${SET01[i].Month}' 
+                        //     AND [Year] = '${SET01[i].Year}'`;
+                        // const result = await mssql.qurey(queryCheck);
+                        // if (result.recordset[0].count > 0) {
+                        //     const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Service]
+                        //          SET [Type] = '${SET01[i].Type}', 
+                        //             [MKTGroup] = '${SET01[i].MKTGroup}', 
+                        //             [Group] = '${SET01[i].Group}', 
+                        //             [Customer] = '${SET01[i].Customer}', 
+                        //             [CustShort] = '${SET01[i].CustShort}', 
+                        //             [Frequency] = '${SET01[i].Frequency}', 
+                        //             [Incharge] = '${SET01[i].Incharge}', 
+                        //             [KPIServ] = '${SET01[i].KPIServ}', 
+                        //             [KPIPeriod] = '${SET01[i].KPIPeriod}', 
+                        //             [RepItems] = '${SET01[i].RepItems}', 
+                        //             [Month] = '${SET01[i].Month}', 
+                        //             [Year] = '${SET01[i].Year}', 
+                        //             [ReqNo1] = '${SET01[i].ReqNo1}', 
+                        //             [Freq1] = '${SET01[i].Freq1}', 
+                        //             [Evaluation1] = '${SET01[i].Evaluation1}', 
+                        //             [PlanSam1] = '${SET01[i].PlanSam1}', 
+                        //             [ActSam1] = '${SET01[i].ActSam1}', 
+                        //             [RepDue1] = '${SET01[i].RepDue1}', 
+                        //             [SentRep1] = '${SET01[i].SentRep1}', 
+                        //             [RepDays1] = '${SET01[i].RepDays1}', 
+                        //             [Request1] = '${SET01[i].Request1}', 
+                        //             [TTCResult1] = '${SET01[i].TTCResult1}', 
+                        //             [IssueDate1] = '${SET01[i].IssueDate1}', 
+                        //             [Sublead1] = '${SET01[i].Sublead1}', 
+                        //             [GL1] = '${SET01[i].GL1}', 
+                        //             [MGR1] = '${SET01[i].MGR1}', 
+                        //             [JP1] = '${SET01[i].JP1}', 
+                        //             [Revise1_1] = '${SET01[i].Revise1_1}', 
+                        //             [Sublead1_1] = '${SET01[i].Sublead1_1}', 
+                        //             [GL1_1] = '${SET01[i].GL1_1}', 
+                        //             [MGR1_1] = '${SET01[i].MGR1_1}', 
+                        //             [JP1_1] = '${SET01[i].JP1_1}', 
+                        //             [Revise1_2] = '${SET01[i].Revise1_2}', 
+                        //             [Sublead1_2] = '${SET01[i].Sublead1_2}', 
+                        //             [GL1_2] = '${SET01[i].GL1_2}', 
+                        //             [MGR1_2] = '${SET01[i].MGR1_2}', 
+                        //             [JP1_2] = '${SET01[i].JP1_2}', 
+                        //             [Revise1_3] = '${SET01[i].Revise1_3}', 
+                        //             [Sublead1_3] = '${SET01[i].Sublead1_3}', 
+                        //             [GL1_3] = '${SET01[i].GL1_3}', 
+                        //             [MGR1_3] = '${SET01[i].MGR1_3}', 
+                        //             [JP1_3] = '${SET01[i].JP1_3}', 
+                        //             [BDPrepare1] = '${SET01[i].BDPrepare1}', 
+                        //             [BDTTC1] = '${SET01[i].BDTTC1}', 
+                        //             [BDIssue1] = '${SET01[i].BDIssue1}', 
+                        //             [BDSublead1] = '${SET01[i].BDSublead1}', 
+                        //             [BDGL1] = '${SET01[i].BDGL1}', 
+                        //             [BDMGR1] = '${SET01[i].BDMGR1}', 
+                        //             [BDJP1] = '${SET01[i].BDJP1}', 
+                        //             [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
+                        //             [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
+                        //             [BDGL1_1] = '${SET01[i].BDGL1_1}', 
+                        //             [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
+                        //             [BDJP1_1] = '${SET01[i].BDJP1_1}', 
+                        //             [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
+                        //             [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
+                        //             [BDGL1_2] = '${SET01[i].BDGL1_2}', 
+                        //             [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
+                        //             [BDJP1_2] = '${SET01[i].BDJP1_2}', 
+                        //             [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
+                        //             [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
+                        //             [BDGL1_3] = '${SET01[i].BDGL1_3}', 
+                        //             [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
+                        //             [BDJP1_3] = '${SET01[i].BDJP1_3}', 
+                        //             [BDSent1] = '${SET01[i].BDSent1}', 
+                        //             [Stage1] = '${SET01[i].Stage1}',
+                        //             [Reason1] = '${SET01[i].Reason1}', 
+                        //             [ReqNo2] = '${SET01[i].ReqNo2}', 
+                        //             [Freq2] = '${SET01[i].Freq2}', 
+                        //             [Evaluation2] = '${SET01[i].Evaluation2}', 
+                        //             [PlanSam2] = '${SET01[i].PlanSam2}', 
+                        //             [ActSam2] = '${SET01[i].ActSam2}', 
+                        //             [RepDue2] = '${SET01[i].RepDue2}', 
+                        //             [SentRep2] = '${SET01[i].SentRep2}', 
+                        //             [RepDays2] = '${SET01[i].RepDays2}', 
+                        //             [Request2] = '${SET01[i].Request2}', 
+                        //             [TTCResult2] = '${SET01[i].TTCResult2}', 
+                        //             [IssueDate2] = '${SET01[i].IssueDate2}', 
+                        //             [Sublead2] = '${SET01[i].Sublead2}', 
+                        //             [GL2] = '${SET01[i].GL2}', 
+                        //             [MGR2] = '${SET01[i].MGR2}', 
+                        //             [JP2] = '${SET01[i].JP2}', 
+                        //             [Revise2_1] = '${SET01[i].Revise2_1}', 
+                        //             [Sublead2_1] = '${SET01[i].Sublead2_1}', 
+                        //             [GL2_1] = '${SET01[i].GL2_1}', 
+                        //             [MGR2_1] = '${SET01[i].MGR2_1}', 
+                        //             [JP2_1] = '${SET01[i].JP2_1}', 
+                        //             [Revise2_2] = '${SET01[i].Revise2_2}', 
+                        //             [Sublead2_2] = '${SET01[i].Sublead2_2}', 
+                        //             [GL2_2] = '${SET01[i].GL2_2}', 
+                        //             [MGR2_2] = '${SET01[i].MGR2_2}', 
+                        //             [JP2_2] = '${SET01[i].JP2_2}', 
+                        //             [Revise2_3] = '${SET01[i].Revise2_3}', 
+                        //             [Sublead2_3] = '${SET01[i].Sublead2_3}', 
+                        //             [GL2_3] = '${SET01[i].GL2_3}', 
+                        //             [MGR2_3] = '${SET01[i].MGR2_3}', 
+                        //             [JP2_3] = '${SET01[i].JP2_3}', 
+                        //             [BDPrepare2] = '${SET01[i].BDPrepare2}', 
+                        //             [BDTTC2] = '${SET01[i].BDTTC2}', 
+                        //             [BDIssue2] = '${SET01[i].BDIssue2}', 
+                        //             [BDSublead2] = '${SET01[i].BDSublead2}', 
+                        //             [BDGL2] = '${SET01[i].BDGL2}', 
+                        //             [BDMGR2] = '${SET01[i].BDMGR2}', 
+                        //             [BDJP2] = '${SET01[i].BDJP2}', 
+                        //             [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
+                        //             [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
+                        //             [BDGL2_1] = '${SET01[i].BDGL2_1}', 
+                        //             [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
+                        //             [BDJP2_1] = '${SET01[i].BDJP2_1}', 
+                        //             [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
+                        //             [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
+                        //             [BDGL2_2] = '${SET01[i].BDGL2_2}', 
+                        //             [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
+                        //             [BDJP2_2] = '${SET01[i].BDJP2_2}', 
+                        //             [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
+                        //             [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
+                        //             [BDGL2_3] = '${SET01[i].BDGL2_3}', 
+                        //             [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
+                        //             [BDJP2_3] = '${SET01[i].BDJP2_3}', 
+                        //             [BDSent2] = '${SET01[i].BDSent2}', 
+                        //             [Stage2] = '${SET01[i].Stage2}',
+                        //             [Reason2] = '${SET01[i].Reason2}', 
+                        //             [ReqNo3] = '${SET01[i].ReqNo3}', 
+                        //             [Freq3] = '${SET01[i].Freq3}', 
+                        //             [Evaluation3] = '${SET01[i].Evaluation3}', 
+                        //             [PlanSam3] = '${SET01[i].PlanSam3}', 
+                        //             [ActSam3] = '${SET01[i].ActSam3}', 
+                        //             [RepDue3] = '${SET01[i].RepDue3}', 
+                        //             [SentRep3] = '${SET01[i].SentRep3}', 
+                        //             [RepDays3] = '${SET01[i].RepDays3}', 
+                        //             [Request3] = '${SET01[i].Request3}', 
+                        //             [TTCResult3] = '${SET01[i].TTCResult3}', 
+                        //             [IssueDate3] = '${SET01[i].IssueDate3}', 
+                        //             [Sublead3] = '${SET01[i].Sublead3}', 
+                        //             [GL3] = '${SET01[i].GL3}', 
+                        //             [MGR3] = '${SET01[i].MGR3}', 
+                        //             [JP3] = '${SET01[i].JP3}', 
+                        //             [Revise3_1] = '${SET01[i].Revise3_1}', 
+                        //             [Sublead3_1] = '${SET01[i].Sublead3_1}', 
+                        //             [GL3_1] = '${SET01[i].GL3_1}', 
+                        //             [MGR3_1] = '${SET01[i].MGR3_1}', 
+                        //             [JP3_1] = '${SET01[i].JP3_1}', 
+                        //             [Revise3_2] = '${SET01[i].Revise3_2}', 
+                        //             [Sublead3_2] = '${SET01[i].Sublead3_2}', 
+                        //             [GL3_2] = '${SET01[i].GL3_2}', 
+                        //             [MGR3_2] = '${SET01[i].MGR3_2}', 
+                        //             [JP3_2] = '${SET01[i].JP3_2}', 
+                        //             [Revise3_3] = '${SET01[i].Revise3_3}', 
+                        //             [Sublead3_3] = '${SET01[i].Sublead3_3}', 
+                        //             [GL3_3] = '${SET01[i].GL3_3}', 
+                        //             [MGR3_3] = '${SET01[i].MGR3_3}', 
+                        //             [JP3_3] = '${SET01[i].JP3_3}', 
+                        //             [BDPrepare3] = '${SET01[i].BDPrepare3}', 
+                        //             [BDTTC3] = '${SET01[i].BDTTC3}', 
+                        //             [BDIssue3] = '${SET01[i].BDIssue3}', 
+                        //             [BDSublead3] = '${SET01[i].BDSublead3}', 
+                        //             [BDGL3] = '${SET01[i].BDGL3}', 
+                        //             [BDMGR3] = '${SET01[i].BDMGR3}', 
+                        //             [BDJP3] = '${SET01[i].BDJP3}', 
+                        //             [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
+                        //             [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
+                        //             [BDGL3_1] = '${SET01[i].BDGL3_1}', 
+                        //             [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
+                        //             [BDJP3_1] = '${SET01[i].BDJP3_1}', 
+                        //             [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
+                        //             [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
+                        //             [BDGL3_2] = '${SET01[i].BDGL3_2}', 
+                        //             [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
+                        //             [BDJP3_2] = '${SET01[i].BDJP3_2}', 
+                        //             [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
+                        //             [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
+                        //             [BDGL3_3] = '${SET01[i].BDGL3_3}', 
+                        //             [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
+                        //             [BDJP3_3] = '${SET01[i].BDJP3_3}', 
+                        //             [BDSent3] = '${SET01[i].BDSent3}', 
+                        //             [Stage3] = '${SET01[i].Stage3}',
+                        //             [Reason3] = '${SET01[i].Reason3}', 
+                        //             [ReqNo4] = '${SET01[i].ReqNo4}', 
+                        //             [Freq4] = '${SET01[i].Freq4}', 
+                        //             [Evaluation4] = '${SET01[i].Evaluation4}', 
+                        //             [PlanSam4] = '${SET01[i].PlanSam4}', 
+                        //             [ActSam4] = '${SET01[i].ActSam4}', 
+                        //             [RepDue4] = '${SET01[i].RepDue4}', 
+                        //             [SentRep4] = '${SET01[i].SentRep4}', 
+                        //             [RepDays4] = '${SET01[i].RepDays4}', 
+                        //             [Request4] = '${SET01[i].Request4}', 
+                        //             [TTCResult4] = '${SET01[i].TTCResult4}', 
+                        //             [IssueDate4] = '${SET01[i].IssueDate4}', 
+                        //             [Sublead4] = '${SET01[i].Sublead4}', 
+                        //             [GL4] = '${SET01[i].GL4}', 
+                        //             [MGR4] = '${SET01[i].MGR4}', 
+                        //             [JP4] = '${SET01[i].JP4}', 
+                        //             [Revise4_1] = '${SET01[i].Revise4_1}', 
+                        //             [Sublead4_1] = '${SET01[i].Sublead4_1}', 
+                        //             [GL4_1] = '${SET01[i].GL4_1}', 
+                        //             [MGR4_1] = '${SET01[i].MGR4_1}', 
+                        //             [JP4_1] = '${SET01[i].JP4_1}', 
+                        //             [Revise4_2] = '${SET01[i].Revise4_2}', 
+                        //             [Sublead4_2] = '${SET01[i].Sublead4_2}', 
+                        //             [GL4_2] = '${SET01[i].GL4_2}', 
+                        //             [MGR4_2] = '${SET01[i].MGR4_2}', 
+                        //             [JP4_2] = '${SET01[i].JP4_2}', 
+                        //             [Revise4_3] = '${SET01[i].Revise4_3}', 
+                        //             [Sublead4_3] = '${SET01[i].Sublead4_3}', 
+                        //             [GL4_3] = '${SET01[i].GL4_3}', 
+                        //             [MGR4_3] = '${SET01[i].MGR4_3}', 
+                        //             [JP4_3] = '${SET01[i].JP4_3}', 
+                        //             [BDPrepare4] = '${SET01[i].BDPrepare4}', 
+                        //             [BDTTC4] = '${SET01[i].BDTTC4}', 
+                        //             [BDIssue4] = '${SET01[i].BDIssue4}', 
+                        //             [BDSublead4] = '${SET01[i].BDSublead4}', 
+                        //             [BDGL4] = '${SET01[i].BDGL4}', 
+                        //             [BDMGR4] = '${SET01[i].BDMGR4}', 
+                        //             [BDJP4] = '${SET01[i].BDJP4}', 
+                        //             [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
+                        //             [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
+                        //             [BDGL4_1] = '${SET01[i].BDGL4_1}', 
+                        //             [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
+                        //             [BDJP4_1] = '${SET01[i].BDJP4_1}', 
+                        //             [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
+                        //             [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
+                        //             [BDGL4_2] = '${SET01[i].BDGL4_2}', 
+                        //             [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
+                        //             [BDJP4_2] = '${SET01[i].BDJP4_2}', 
+                        //             [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
+                        //             [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
+                        //             [BDGL4_3] = '${SET01[i].GL4_3}', 
+                        //             [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
+                        //             [BDJP4_3] = '${SET01[i].BDJP4_3}', 
+                        //             [BDSent4] = '${SET01[i].BDSent4}',
+                        //             [Stage4] = '${SET01[i].Stage4}', 
+                        //             [Reason4] = '${SET01[i].Reason4}'
+                        //             WHERE [CustShort] = '${SET01[i].CustShort}' 
+                        //             AND [Month] = '${SET01[i].Month}' 
+                        //             AND [Year] = '${SET01[i].Year}'
+                        //             AND [ReqNo1] = '${SET01[i].ReqNo1}'
+                        //             AND [ReqNo2] = '${SET01[i].ReqNo2}'
+                        //             AND [ReqNo3] = '${SET01[i].ReqNo3}'
+                        //             AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
+                        //     await mssql.qurey(queryUpdate);
+                        //     // console.log(queryUpdate);
+                        //     // console.log("Update Complete " + i);
+                        // } else {
+                        var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_Service] 
                         ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [Request1], [TTCResult1], 
                         [IssueDate1], [Sublead1], [GL1], [MGR1], [JP1], [Revise1_1], [Sublead1_1], [GL1_1], [MGR1_1], [JP1_1], [Revise1_2], [Sublead1_2], [GL1_2], [MGR1_2], [JP1_2], [Revise1_3], [Sublead1_3], [GL1_3], [MGR1_3], [JP1_3], [BDPrepare1], [BDTTC1], [BDIssue1], [BDSublead1], [BDGL1], 
                         [BDMGR1], [BDJP1], [BDRevise1_1], [BDSublead1_1], [BDGL1_1], [BDMGR1_1], [BDJP1_1], [BDRevise1_2], [BDSublead1_2], [BDGL1_2], [BDMGR1_2], [BDJP1_2], [BDRevise1_3], [BDSublead1_3], [BDGL1_3], [BDMGR1_3], [BDJP1_3], [BDSent1], [Stage1], [Reason1], [ReqNo2], 
@@ -884,10 +884,10 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         [BDSublead4_3], [BDGL4_3], [BDMGR4_3], [BDJP4_3], [BDSent4], [Stage4], [Reason4]) 
                         values `;
 
-                            for (i = 0; i < SET01.length; i++) {
-                                queryInsert =
-                                    queryInsert +
-                                    `( '${SET01[i].Type}'
+                        for (i = 0; i < SET01.length; i++) {
+                            queryInsert =
+                                queryInsert +
+                                `( '${SET01[i].Type}'
                                 ,'${SET01[i].MKTGroup}'
                                 ,'${SET01[i].Group}'
                                 ,'${SET01[i].Customer}'
@@ -1120,16 +1120,16 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 ,'${SET01[i].Stage4}'
                                 ,'${SET01[i].Reason4}'
                             )`;
-                                if (i !== SET01.length - 1) {
-                                    queryInsert = queryInsert + ",";
-                                }
+                            if (i !== SET01.length - 1) {
+                                queryInsert = queryInsert + ",";
                             }
-                            query = queryInsert + ";";
-                            // query = queryDelete + queryInsert + ";";
-                            await mssql.qurey(query);
-                            // console.log(query);
-                            // console.log("Insert Complete " + i);
                         }
+                        query = queryInsert + ";";
+                        // query = queryDelete + queryInsert + ";";
+                        await mssql.qurey(query);
+                        // console.log(query);
+                        // console.log("Insert Complete " + i);
+                        // }
                     }
                 } catch (err) {
                     console.error('Error executing SQL query:', err.message);
@@ -1154,6 +1154,8 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
     await loadRoutineKACReport();
     await loadHolidays();
     if (input['YEAR'] != undefined) {
+        const queryDelete = `DELETE FROM [SARKPI].[dbo].[KPI_Overdue] WHERE Year = ${input['YEAR']}`;
+        await mssql.qurey(queryDelete);
         for (let p = 0; p < 12; p++) {
             let Round = (p + 1).toString().padStart(2, '0');
             const currentMonth = new Date().getMonth() + 1;
@@ -1209,7 +1211,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                 const requestRecordsMap = {};
                 for (let i = 0; i < requestRecords.length; i++) {
                     const req = requestRecords[i];
-                    const custShort = req.CustShort?.trim();
+                    const custShort = req.CustShort;
                     if (custShort) {
                         if (!requestRecordsMap[custShort]) {
                             requestRecordsMap[custShort] = [];
@@ -1224,9 +1226,9 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                     "MKTGroup": record['MKTGROUP'],
                     "Group": record['GROUP'],
                     "Customer": record['CustFull'],
-                    "CustShort": record['CustShort'].trim(),
+                    "CustShort": record['CustShort'],
                     "Frequency": record['FRE'],
-                    "Incharge": record['Incharge'].trim(),
+                    "Incharge": record['Incharge'],
                     "KPIServ": record['GROUP'] === 'KAC' ? '100' : (record['GROUP'] === 'MEDIUM' ? '95' : record['KPIServ']),
                     "KPIPeriod": record['TYPE'] === 'A' ? '12' : (record['TYPE'] === 'B' ? '10' : record['KPIPERIOD']),
                     "RepItems": record['REPORTITEMS'],
@@ -1619,19 +1621,22 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                         const Reason = req.Reason;
 
                         let week = 0;
-                        if (dayOfMonth >= 1 && dayOfMonth <= 8) {
+                        if (dayOfMonth >= 1 && dayOfMonth <= 12) {
                             week = 1;
-                        } else if (dayOfMonth >= 9 && dayOfMonth <= 16) {
+                        } else if (dayOfMonth >= 13 && dayOfMonth <= 23) {
                             week = 2;
-                        } else if (dayOfMonth >= 17 && dayOfMonth <= 24) {
+                        } else if (dayOfMonth >= 24 && dayOfMonth <= 31) {
                             week = 3;
-                        } else if (dayOfMonth >= 25 && dayOfMonth <= 31) {
-                            week = 4;
                         }
 
                         if (custshort == lastcustshort && reqNo == lastreqno) {
                             if (week < lastWeek) {
                                 week = lastWeek;
+                            }
+                        }
+                        if (custshort == lastcustshort && reqNo != lastreqno) {
+                            if (week < lastWeek) {
+                                week = week + 1;
                             }
                         }
                         if (custshort == lastcustshort && reqNo != lastreqno) {
@@ -1881,261 +1886,261 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                 }
                 try {
                     for (let i = 0; i < SET01.length; i++) {
-                        const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_Overdue]
-                            WHERE [CustShort] = '${SET01[i].CustShort}' 
-                            AND [Month] = '${SET01[i].Month}' 
-                            AND [Year] = '${SET01[i].Year}'
-                            AND ([ReqNo1] = '${SET01[i].ReqNo1}'
-                            OR [ReqNo2] = '${SET01[i].ReqNo2}'
-                            OR [ReqNo3] = '${SET01[i].ReqNo3}'
-                            OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
-                        const result = await mssql.qurey(queryCheck);
-                        if (result.recordset[0].count > 0) {
-                            const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Overdue]
-                                 SET [Type] = '${SET01[i].Type}', 
-                                    [MKTGroup] = '${SET01[i].MKTGroup}', 
-                                    [Group] = '${SET01[i].Group}', 
-                                    [Customer] = '${SET01[i].Customer}', 
-                                    [CustShort] = '${SET01[i].CustShort}', 
-                                    [Frequency] = '${SET01[i].Frequency}', 
-                                    [Incharge] = '${SET01[i].Incharge}', 
-                                    [KPIServ] = '${SET01[i].KPIServ}', 
-                                    [KPIPeriod] = '${SET01[i].KPIPeriod}', 
-                                    [RepItems] = '${SET01[i].RepItems}', 
-                                    [Month] = '${SET01[i].Month}', 
-                                    [Year] = '${SET01[i].Year}', 
-                                    [ReqNo1] = '${SET01[i].ReqNo1}', 
-                                    [Freq1] = '${SET01[i].Freq1}', 
-                                    [Evaluation1] = '${SET01[i].Evaluation1}', 
-                                    [PlanSam1] = '${SET01[i].PlanSam1}', 
-                                    [ActSam1] = '${SET01[i].ActSam1}', 
-                                    [RepDue1] = '${SET01[i].RepDue1}', 
-                                    [SentRep1] = '${SET01[i].SentRep1}', 
-                                    [RepDays1] = '${SET01[i].RepDays1}', 
-                                    [Request1] = '${SET01[i].Request1}', 
-                                    [TTCResult1] = '${SET01[i].TTCResult1}', 
-                                    [IssueDate1] = '${SET01[i].IssueDate1}', 
-                                    [Sublead1] = '${SET01[i].Sublead1}', 
-                                    [GL1] = '${SET01[i].GL1}', 
-                                    [MGR1] = '${SET01[i].MGR1}', 
-                                    [JP1] = '${SET01[i].JP1}', 
-                                    [Revise1_1] = '${SET01[i].Revise1_1}', 
-                                    [Sublead1_1] = '${SET01[i].Sublead1_1}', 
-                                    [GL1_1] = '${SET01[i].GL1_1}', 
-                                    [MGR1_1] = '${SET01[i].MGR1_1}', 
-                                    [JP1_1] = '${SET01[i].JP1_1}', 
-                                    [Revise1_2] = '${SET01[i].Revise1_2}', 
-                                    [Sublead1_2] = '${SET01[i].Sublead1_2}', 
-                                    [GL1_2] = '${SET01[i].GL1_2}', 
-                                    [MGR1_2] = '${SET01[i].MGR1_2}', 
-                                    [JP1_2] = '${SET01[i].JP1_2}', 
-                                    [Revise1_3] = '${SET01[i].Revise1_3}', 
-                                    [Sublead1_3] = '${SET01[i].Sublead1_3}', 
-                                    [GL1_3] = '${SET01[i].GL1_3}', 
-                                    [MGR1_3] = '${SET01[i].MGR1_3}', 
-                                    [JP1_3] = '${SET01[i].JP1_3}', 
-                                    [BDPrepare1] = '${SET01[i].BDPrepare1}', 
-                                    [BDTTC1] = '${SET01[i].BDTTC1}', 
-                                    [BDIssue1] = '${SET01[i].BDIssue1}', 
-                                    [BDSublead1] = '${SET01[i].BDSublead1}', 
-                                    [BDGL1] = '${SET01[i].BDGL1}', 
-                                    [BDMGR1] = '${SET01[i].BDMGR1}', 
-                                    [BDJP1] = '${SET01[i].BDJP1}', 
-                                    [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
-                                    [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
-                                    [BDGL1_1] = '${SET01[i].BDGL1_1}', 
-                                    [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
-                                    [BDJP1_1] = '${SET01[i].BDJP1_1}', 
-                                    [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
-                                    [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
-                                    [BDGL1_2] = '${SET01[i].BDGL1_2}', 
-                                    [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
-                                    [BDJP1_2] = '${SET01[i].BDJP1_2}', 
-                                    [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
-                                    [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
-                                    [BDGL1_3] = '${SET01[i].BDGL1_3}', 
-                                    [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
-                                    [BDJP1_3] = '${SET01[i].BDJP1_3}', 
-                                    [BDSent1] = '${SET01[i].BDSent1}', 
-                                    [Stage1] = '${SET01[i].Stage1}',
-                                    [Reason1] = '${SET01[i].Reason1}', 
-                                    [ReqNo2] = '${SET01[i].ReqNo2}', 
-                                    [Freq2] = '${SET01[i].Freq2}', 
-                                    [Evaluation2] = '${SET01[i].Evaluation2}', 
-                                    [PlanSam2] = '${SET01[i].PlanSam2}', 
-                                    [ActSam2] = '${SET01[i].ActSam2}', 
-                                    [RepDue2] = '${SET01[i].RepDue2}', 
-                                    [SentRep2] = '${SET01[i].SentRep2}', 
-                                    [RepDays2] = '${SET01[i].RepDays2}', 
-                                    [Request2] = '${SET01[i].Request2}', 
-                                    [TTCResult2] = '${SET01[i].TTCResult2}', 
-                                    [IssueDate2] = '${SET01[i].IssueDate2}', 
-                                    [Sublead2] = '${SET01[i].Sublead2}', 
-                                    [GL2] = '${SET01[i].GL2}', 
-                                    [MGR2] = '${SET01[i].MGR2}', 
-                                    [JP2] = '${SET01[i].JP2}', 
-                                    [Revise2_1] = '${SET01[i].Revise2_1}', 
-                                    [Sublead2_1] = '${SET01[i].Sublead2_1}', 
-                                    [GL2_1] = '${SET01[i].GL2_1}', 
-                                    [MGR2_1] = '${SET01[i].MGR2_1}', 
-                                    [JP2_1] = '${SET01[i].JP2_1}', 
-                                    [Revise2_2] = '${SET01[i].Revise2_2}', 
-                                    [Sublead2_2] = '${SET01[i].Sublead2_2}', 
-                                    [GL2_2] = '${SET01[i].GL2_2}', 
-                                    [MGR2_2] = '${SET01[i].MGR2_2}', 
-                                    [JP2_2] = '${SET01[i].JP2_2}', 
-                                    [Revise2_3] = '${SET01[i].Revise2_3}', 
-                                    [Sublead2_3] = '${SET01[i].Sublead2_3}', 
-                                    [GL2_3] = '${SET01[i].GL2_3}', 
-                                    [MGR2_3] = '${SET01[i].MGR2_3}', 
-                                    [JP2_3] = '${SET01[i].JP2_3}', 
-                                    [BDPrepare2] = '${SET01[i].BDPrepare2}', 
-                                    [BDTTC2] = '${SET01[i].BDTTC2}', 
-                                    [BDIssue2] = '${SET01[i].BDIssue2}', 
-                                    [BDSublead2] = '${SET01[i].BDSublead2}', 
-                                    [BDGL2] = '${SET01[i].BDGL2}', 
-                                    [BDMGR2] = '${SET01[i].BDMGR2}', 
-                                    [BDJP2] = '${SET01[i].BDJP2}', 
-                                    [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
-                                    [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
-                                    [BDGL2_1] = '${SET01[i].BDGL2_1}', 
-                                    [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
-                                    [BDJP2_1] = '${SET01[i].BDJP2_1}', 
-                                    [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
-                                    [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
-                                    [BDGL2_2] = '${SET01[i].BDGL2_2}', 
-                                    [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
-                                    [BDJP2_2] = '${SET01[i].BDJP2_2}', 
-                                    [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
-                                    [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
-                                    [BDGL2_3] = '${SET01[i].BDGL2_3}', 
-                                    [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
-                                    [BDJP2_3] = '${SET01[i].BDJP2_3}', 
-                                    [BDSent2] = '${SET01[i].BDSent2}', 
-                                    [Stage2] = '${SET01[i].Stage2}',
-                                    [Reason2] = '${SET01[i].Reason2}', 
-                                    [ReqNo3] = '${SET01[i].ReqNo3}', 
-                                    [Freq3] = '${SET01[i].Freq3}', 
-                                    [Evaluation3] = '${SET01[i].Evaluation3}', 
-                                    [PlanSam3] = '${SET01[i].PlanSam3}', 
-                                    [ActSam3] = '${SET01[i].ActSam3}', 
-                                    [RepDue3] = '${SET01[i].RepDue3}', 
-                                    [SentRep3] = '${SET01[i].SentRep3}', 
-                                    [RepDays3] = '${SET01[i].RepDays3}', 
-                                    [Request3] = '${SET01[i].Request3}', 
-                                    [TTCResult3] = '${SET01[i].TTCResult3}', 
-                                    [IssueDate3] = '${SET01[i].IssueDate3}', 
-                                    [Sublead3] = '${SET01[i].Sublead3}', 
-                                    [GL3] = '${SET01[i].GL3}', 
-                                    [MGR3] = '${SET01[i].MGR3}', 
-                                    [JP3] = '${SET01[i].JP3}', 
-                                    [Revise3_1] = '${SET01[i].Revise3_1}', 
-                                    [Sublead3_1] = '${SET01[i].Sublead3_1}', 
-                                    [GL3_1] = '${SET01[i].GL3_1}', 
-                                    [MGR3_1] = '${SET01[i].MGR3_1}', 
-                                    [JP3_1] = '${SET01[i].JP3_1}', 
-                                    [Revise3_2] = '${SET01[i].Revise3_2}', 
-                                    [Sublead3_2] = '${SET01[i].Sublead3_2}', 
-                                    [GL3_2] = '${SET01[i].GL3_2}', 
-                                    [MGR3_2] = '${SET01[i].MGR3_2}', 
-                                    [JP3_2] = '${SET01[i].JP3_2}', 
-                                    [Revise3_3] = '${SET01[i].Revise3_3}', 
-                                    [Sublead3_3] = '${SET01[i].Sublead3_3}', 
-                                    [GL3_3] = '${SET01[i].GL3_3}', 
-                                    [MGR3_3] = '${SET01[i].MGR3_3}', 
-                                    [JP3_3] = '${SET01[i].JP3_3}', 
-                                    [BDPrepare3] = '${SET01[i].BDPrepare3}', 
-                                    [BDTTC3] = '${SET01[i].BDTTC3}', 
-                                    [BDIssue3] = '${SET01[i].BDIssue3}', 
-                                    [BDSublead3] = '${SET01[i].BDSublead3}', 
-                                    [BDGL3] = '${SET01[i].BDGL3}', 
-                                    [BDMGR3] = '${SET01[i].BDMGR3}', 
-                                    [BDJP3] = '${SET01[i].BDJP3}', 
-                                    [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
-                                    [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
-                                    [BDGL3_1] = '${SET01[i].BDGL3_1}', 
-                                    [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
-                                    [BDJP3_1] = '${SET01[i].BDJP3_1}', 
-                                    [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
-                                    [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
-                                    [BDGL3_2] = '${SET01[i].BDGL3_2}', 
-                                    [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
-                                    [BDJP3_2] = '${SET01[i].BDJP3_2}', 
-                                    [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
-                                    [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
-                                    [BDGL3_3] = '${SET01[i].BDGL3_3}', 
-                                    [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
-                                    [BDJP3_3] = '${SET01[i].BDJP3_3}', 
-                                    [BDSent3] = '${SET01[i].BDSent3}', 
-                                    [Stage3] = '${SET01[i].Stage3}',
-                                    [Reason3] = '${SET01[i].Reason3}', 
-                                    [ReqNo4] = '${SET01[i].ReqNo4}', 
-                                    [Freq4] = '${SET01[i].Freq4}', 
-                                    [Evaluation4] = '${SET01[i].Evaluation4}', 
-                                    [PlanSam4] = '${SET01[i].PlanSam4}', 
-                                    [ActSam4] = '${SET01[i].ActSam4}', 
-                                    [RepDue4] = '${SET01[i].RepDue4}', 
-                                    [SentRep4] = '${SET01[i].SentRep4}', 
-                                    [RepDays4] = '${SET01[i].RepDays4}', 
-                                    [Request4] = '${SET01[i].Request4}', 
-                                    [TTCResult4] = '${SET01[i].TTCResult4}', 
-                                    [IssueDate4] = '${SET01[i].IssueDate4}', 
-                                    [Sublead4] = '${SET01[i].Sublead4}', 
-                                    [GL4] = '${SET01[i].GL4}', 
-                                    [MGR4] = '${SET01[i].MGR4}', 
-                                    [JP4] = '${SET01[i].JP4}', 
-                                    [Revise4_1] = '${SET01[i].Revise4_1}', 
-                                    [Sublead4_1] = '${SET01[i].Sublead4_1}', 
-                                    [GL4_1] = '${SET01[i].GL4_1}', 
-                                    [MGR4_1] = '${SET01[i].MGR4_1}', 
-                                    [JP4_1] = '${SET01[i].JP4_1}', 
-                                    [Revise4_2] = '${SET01[i].Revise4_2}', 
-                                    [Sublead4_2] = '${SET01[i].Sublead4_2}', 
-                                    [GL4_2] = '${SET01[i].GL4_2}', 
-                                    [MGR4_2] = '${SET01[i].MGR4_2}', 
-                                    [JP4_2] = '${SET01[i].JP4_2}', 
-                                    [Revise4_3] = '${SET01[i].Revise4_3}', 
-                                    [Sublead4_3] = '${SET01[i].Sublead4_3}', 
-                                    [GL4_3] = '${SET01[i].GL4_3}', 
-                                    [MGR4_3] = '${SET01[i].MGR4_3}', 
-                                    [JP4_3] = '${SET01[i].JP4_3}', 
-                                    [BDPrepare4] = '${SET01[i].BDPrepare4}', 
-                                    [BDTTC4] = '${SET01[i].BDTTC4}', 
-                                    [BDIssue4] = '${SET01[i].BDIssue4}', 
-                                    [BDSublead4] = '${SET01[i].BDSublead4}', 
-                                    [BDGL4] = '${SET01[i].BDGL4}', 
-                                    [BDMGR4] = '${SET01[i].BDMGR4}', 
-                                    [BDJP4] = '${SET01[i].BDJP4}', 
-                                    [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
-                                    [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
-                                    [BDGL4_1] = '${SET01[i].BDGL4_1}', 
-                                    [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
-                                    [BDJP4_1] = '${SET01[i].BDJP4_1}', 
-                                    [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
-                                    [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
-                                    [BDGL4_2] = '${SET01[i].BDGL4_2}', 
-                                    [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
-                                    [BDJP4_2] = '${SET01[i].BDJP4_2}', 
-                                    [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
-                                    [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
-                                    [BDGL4_3] = '${SET01[i].GL4_3}', 
-                                    [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
-                                    [BDJP4_3] = '${SET01[i].BDJP4_3}', 
-                                    [BDSent4] = '${SET01[i].BDSent4}',
-                                    [Stage4] = '${SET01[i].Stage4}', 
-                                    [Reason4] = '${SET01[i].Reason4}'
-                                    WHERE [CustShort] = '${SET01[i].CustShort}' 
-                                    AND [Month] = '${SET01[i].Month}' 
-                                    AND [Year] = '${SET01[i].Year}'
-                                    AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                                    AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                                    AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                                    AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
-                            await mssql.qurey(queryUpdate);
-                            // console.log(queryUpdate);
-                            // console.log("Update Complete " + i);
-                        } else {
-                            var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_Overdue] 
+                        // const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_Overdue]
+                        //     WHERE [CustShort] = '${SET01[i].CustShort}' 
+                        //     AND [Month] = '${SET01[i].Month}' 
+                        //     AND [Year] = '${SET01[i].Year}'
+                        //     AND ([ReqNo1] = '${SET01[i].ReqNo1}'
+                        //     OR [ReqNo2] = '${SET01[i].ReqNo2}'
+                        //     OR [ReqNo3] = '${SET01[i].ReqNo3}'
+                        //     OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
+                        // const result = await mssql.qurey(queryCheck);
+                        // if (result.recordset[0].count > 0) {
+                        //     const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Overdue]
+                        //          SET [Type] = '${SET01[i].Type}', 
+                        //             [MKTGroup] = '${SET01[i].MKTGroup}', 
+                        //             [Group] = '${SET01[i].Group}', 
+                        //             [Customer] = '${SET01[i].Customer}', 
+                        //             [CustShort] = '${SET01[i].CustShort}', 
+                        //             [Frequency] = '${SET01[i].Frequency}', 
+                        //             [Incharge] = '${SET01[i].Incharge}', 
+                        //             [KPIServ] = '${SET01[i].KPIServ}', 
+                        //             [KPIPeriod] = '${SET01[i].KPIPeriod}', 
+                        //             [RepItems] = '${SET01[i].RepItems}', 
+                        //             [Month] = '${SET01[i].Month}', 
+                        //             [Year] = '${SET01[i].Year}', 
+                        //             [ReqNo1] = '${SET01[i].ReqNo1}', 
+                        //             [Freq1] = '${SET01[i].Freq1}', 
+                        //             [Evaluation1] = '${SET01[i].Evaluation1}', 
+                        //             [PlanSam1] = '${SET01[i].PlanSam1}', 
+                        //             [ActSam1] = '${SET01[i].ActSam1}', 
+                        //             [RepDue1] = '${SET01[i].RepDue1}', 
+                        //             [SentRep1] = '${SET01[i].SentRep1}', 
+                        //             [RepDays1] = '${SET01[i].RepDays1}', 
+                        //             [Request1] = '${SET01[i].Request1}', 
+                        //             [TTCResult1] = '${SET01[i].TTCResult1}', 
+                        //             [IssueDate1] = '${SET01[i].IssueDate1}', 
+                        //             [Sublead1] = '${SET01[i].Sublead1}', 
+                        //             [GL1] = '${SET01[i].GL1}', 
+                        //             [MGR1] = '${SET01[i].MGR1}', 
+                        //             [JP1] = '${SET01[i].JP1}', 
+                        //             [Revise1_1] = '${SET01[i].Revise1_1}', 
+                        //             [Sublead1_1] = '${SET01[i].Sublead1_1}', 
+                        //             [GL1_1] = '${SET01[i].GL1_1}', 
+                        //             [MGR1_1] = '${SET01[i].MGR1_1}', 
+                        //             [JP1_1] = '${SET01[i].JP1_1}', 
+                        //             [Revise1_2] = '${SET01[i].Revise1_2}', 
+                        //             [Sublead1_2] = '${SET01[i].Sublead1_2}', 
+                        //             [GL1_2] = '${SET01[i].GL1_2}', 
+                        //             [MGR1_2] = '${SET01[i].MGR1_2}', 
+                        //             [JP1_2] = '${SET01[i].JP1_2}', 
+                        //             [Revise1_3] = '${SET01[i].Revise1_3}', 
+                        //             [Sublead1_3] = '${SET01[i].Sublead1_3}', 
+                        //             [GL1_3] = '${SET01[i].GL1_3}', 
+                        //             [MGR1_3] = '${SET01[i].MGR1_3}', 
+                        //             [JP1_3] = '${SET01[i].JP1_3}', 
+                        //             [BDPrepare1] = '${SET01[i].BDPrepare1}', 
+                        //             [BDTTC1] = '${SET01[i].BDTTC1}', 
+                        //             [BDIssue1] = '${SET01[i].BDIssue1}', 
+                        //             [BDSublead1] = '${SET01[i].BDSublead1}', 
+                        //             [BDGL1] = '${SET01[i].BDGL1}', 
+                        //             [BDMGR1] = '${SET01[i].BDMGR1}', 
+                        //             [BDJP1] = '${SET01[i].BDJP1}', 
+                        //             [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
+                        //             [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
+                        //             [BDGL1_1] = '${SET01[i].BDGL1_1}', 
+                        //             [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
+                        //             [BDJP1_1] = '${SET01[i].BDJP1_1}', 
+                        //             [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
+                        //             [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
+                        //             [BDGL1_2] = '${SET01[i].BDGL1_2}', 
+                        //             [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
+                        //             [BDJP1_2] = '${SET01[i].BDJP1_2}', 
+                        //             [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
+                        //             [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
+                        //             [BDGL1_3] = '${SET01[i].BDGL1_3}', 
+                        //             [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
+                        //             [BDJP1_3] = '${SET01[i].BDJP1_3}', 
+                        //             [BDSent1] = '${SET01[i].BDSent1}', 
+                        //             [Stage1] = '${SET01[i].Stage1}',
+                        //             [Reason1] = '${SET01[i].Reason1}', 
+                        //             [ReqNo2] = '${SET01[i].ReqNo2}', 
+                        //             [Freq2] = '${SET01[i].Freq2}', 
+                        //             [Evaluation2] = '${SET01[i].Evaluation2}', 
+                        //             [PlanSam2] = '${SET01[i].PlanSam2}', 
+                        //             [ActSam2] = '${SET01[i].ActSam2}', 
+                        //             [RepDue2] = '${SET01[i].RepDue2}', 
+                        //             [SentRep2] = '${SET01[i].SentRep2}', 
+                        //             [RepDays2] = '${SET01[i].RepDays2}', 
+                        //             [Request2] = '${SET01[i].Request2}', 
+                        //             [TTCResult2] = '${SET01[i].TTCResult2}', 
+                        //             [IssueDate2] = '${SET01[i].IssueDate2}', 
+                        //             [Sublead2] = '${SET01[i].Sublead2}', 
+                        //             [GL2] = '${SET01[i].GL2}', 
+                        //             [MGR2] = '${SET01[i].MGR2}', 
+                        //             [JP2] = '${SET01[i].JP2}', 
+                        //             [Revise2_1] = '${SET01[i].Revise2_1}', 
+                        //             [Sublead2_1] = '${SET01[i].Sublead2_1}', 
+                        //             [GL2_1] = '${SET01[i].GL2_1}', 
+                        //             [MGR2_1] = '${SET01[i].MGR2_1}', 
+                        //             [JP2_1] = '${SET01[i].JP2_1}', 
+                        //             [Revise2_2] = '${SET01[i].Revise2_2}', 
+                        //             [Sublead2_2] = '${SET01[i].Sublead2_2}', 
+                        //             [GL2_2] = '${SET01[i].GL2_2}', 
+                        //             [MGR2_2] = '${SET01[i].MGR2_2}', 
+                        //             [JP2_2] = '${SET01[i].JP2_2}', 
+                        //             [Revise2_3] = '${SET01[i].Revise2_3}', 
+                        //             [Sublead2_3] = '${SET01[i].Sublead2_3}', 
+                        //             [GL2_3] = '${SET01[i].GL2_3}', 
+                        //             [MGR2_3] = '${SET01[i].MGR2_3}', 
+                        //             [JP2_3] = '${SET01[i].JP2_3}', 
+                        //             [BDPrepare2] = '${SET01[i].BDPrepare2}', 
+                        //             [BDTTC2] = '${SET01[i].BDTTC2}', 
+                        //             [BDIssue2] = '${SET01[i].BDIssue2}', 
+                        //             [BDSublead2] = '${SET01[i].BDSublead2}', 
+                        //             [BDGL2] = '${SET01[i].BDGL2}', 
+                        //             [BDMGR2] = '${SET01[i].BDMGR2}', 
+                        //             [BDJP2] = '${SET01[i].BDJP2}', 
+                        //             [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
+                        //             [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
+                        //             [BDGL2_1] = '${SET01[i].BDGL2_1}', 
+                        //             [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
+                        //             [BDJP2_1] = '${SET01[i].BDJP2_1}', 
+                        //             [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
+                        //             [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
+                        //             [BDGL2_2] = '${SET01[i].BDGL2_2}', 
+                        //             [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
+                        //             [BDJP2_2] = '${SET01[i].BDJP2_2}', 
+                        //             [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
+                        //             [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
+                        //             [BDGL2_3] = '${SET01[i].BDGL2_3}', 
+                        //             [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
+                        //             [BDJP2_3] = '${SET01[i].BDJP2_3}', 
+                        //             [BDSent2] = '${SET01[i].BDSent2}', 
+                        //             [Stage2] = '${SET01[i].Stage2}',
+                        //             [Reason2] = '${SET01[i].Reason2}', 
+                        //             [ReqNo3] = '${SET01[i].ReqNo3}', 
+                        //             [Freq3] = '${SET01[i].Freq3}', 
+                        //             [Evaluation3] = '${SET01[i].Evaluation3}', 
+                        //             [PlanSam3] = '${SET01[i].PlanSam3}', 
+                        //             [ActSam3] = '${SET01[i].ActSam3}', 
+                        //             [RepDue3] = '${SET01[i].RepDue3}', 
+                        //             [SentRep3] = '${SET01[i].SentRep3}', 
+                        //             [RepDays3] = '${SET01[i].RepDays3}', 
+                        //             [Request3] = '${SET01[i].Request3}', 
+                        //             [TTCResult3] = '${SET01[i].TTCResult3}', 
+                        //             [IssueDate3] = '${SET01[i].IssueDate3}', 
+                        //             [Sublead3] = '${SET01[i].Sublead3}', 
+                        //             [GL3] = '${SET01[i].GL3}', 
+                        //             [MGR3] = '${SET01[i].MGR3}', 
+                        //             [JP3] = '${SET01[i].JP3}', 
+                        //             [Revise3_1] = '${SET01[i].Revise3_1}', 
+                        //             [Sublead3_1] = '${SET01[i].Sublead3_1}', 
+                        //             [GL3_1] = '${SET01[i].GL3_1}', 
+                        //             [MGR3_1] = '${SET01[i].MGR3_1}', 
+                        //             [JP3_1] = '${SET01[i].JP3_1}', 
+                        //             [Revise3_2] = '${SET01[i].Revise3_2}', 
+                        //             [Sublead3_2] = '${SET01[i].Sublead3_2}', 
+                        //             [GL3_2] = '${SET01[i].GL3_2}', 
+                        //             [MGR3_2] = '${SET01[i].MGR3_2}', 
+                        //             [JP3_2] = '${SET01[i].JP3_2}', 
+                        //             [Revise3_3] = '${SET01[i].Revise3_3}', 
+                        //             [Sublead3_3] = '${SET01[i].Sublead3_3}', 
+                        //             [GL3_3] = '${SET01[i].GL3_3}', 
+                        //             [MGR3_3] = '${SET01[i].MGR3_3}', 
+                        //             [JP3_3] = '${SET01[i].JP3_3}', 
+                        //             [BDPrepare3] = '${SET01[i].BDPrepare3}', 
+                        //             [BDTTC3] = '${SET01[i].BDTTC3}', 
+                        //             [BDIssue3] = '${SET01[i].BDIssue3}', 
+                        //             [BDSublead3] = '${SET01[i].BDSublead3}', 
+                        //             [BDGL3] = '${SET01[i].BDGL3}', 
+                        //             [BDMGR3] = '${SET01[i].BDMGR3}', 
+                        //             [BDJP3] = '${SET01[i].BDJP3}', 
+                        //             [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
+                        //             [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
+                        //             [BDGL3_1] = '${SET01[i].BDGL3_1}', 
+                        //             [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
+                        //             [BDJP3_1] = '${SET01[i].BDJP3_1}', 
+                        //             [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
+                        //             [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
+                        //             [BDGL3_2] = '${SET01[i].BDGL3_2}', 
+                        //             [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
+                        //             [BDJP3_2] = '${SET01[i].BDJP3_2}', 
+                        //             [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
+                        //             [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
+                        //             [BDGL3_3] = '${SET01[i].BDGL3_3}', 
+                        //             [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
+                        //             [BDJP3_3] = '${SET01[i].BDJP3_3}', 
+                        //             [BDSent3] = '${SET01[i].BDSent3}', 
+                        //             [Stage3] = '${SET01[i].Stage3}',
+                        //             [Reason3] = '${SET01[i].Reason3}', 
+                        //             [ReqNo4] = '${SET01[i].ReqNo4}', 
+                        //             [Freq4] = '${SET01[i].Freq4}', 
+                        //             [Evaluation4] = '${SET01[i].Evaluation4}', 
+                        //             [PlanSam4] = '${SET01[i].PlanSam4}', 
+                        //             [ActSam4] = '${SET01[i].ActSam4}', 
+                        //             [RepDue4] = '${SET01[i].RepDue4}', 
+                        //             [SentRep4] = '${SET01[i].SentRep4}', 
+                        //             [RepDays4] = '${SET01[i].RepDays4}', 
+                        //             [Request4] = '${SET01[i].Request4}', 
+                        //             [TTCResult4] = '${SET01[i].TTCResult4}', 
+                        //             [IssueDate4] = '${SET01[i].IssueDate4}', 
+                        //             [Sublead4] = '${SET01[i].Sublead4}', 
+                        //             [GL4] = '${SET01[i].GL4}', 
+                        //             [MGR4] = '${SET01[i].MGR4}', 
+                        //             [JP4] = '${SET01[i].JP4}', 
+                        //             [Revise4_1] = '${SET01[i].Revise4_1}', 
+                        //             [Sublead4_1] = '${SET01[i].Sublead4_1}', 
+                        //             [GL4_1] = '${SET01[i].GL4_1}', 
+                        //             [MGR4_1] = '${SET01[i].MGR4_1}', 
+                        //             [JP4_1] = '${SET01[i].JP4_1}', 
+                        //             [Revise4_2] = '${SET01[i].Revise4_2}', 
+                        //             [Sublead4_2] = '${SET01[i].Sublead4_2}', 
+                        //             [GL4_2] = '${SET01[i].GL4_2}', 
+                        //             [MGR4_2] = '${SET01[i].MGR4_2}', 
+                        //             [JP4_2] = '${SET01[i].JP4_2}', 
+                        //             [Revise4_3] = '${SET01[i].Revise4_3}', 
+                        //             [Sublead4_3] = '${SET01[i].Sublead4_3}', 
+                        //             [GL4_3] = '${SET01[i].GL4_3}', 
+                        //             [MGR4_3] = '${SET01[i].MGR4_3}', 
+                        //             [JP4_3] = '${SET01[i].JP4_3}', 
+                        //             [BDPrepare4] = '${SET01[i].BDPrepare4}', 
+                        //             [BDTTC4] = '${SET01[i].BDTTC4}', 
+                        //             [BDIssue4] = '${SET01[i].BDIssue4}', 
+                        //             [BDSublead4] = '${SET01[i].BDSublead4}', 
+                        //             [BDGL4] = '${SET01[i].BDGL4}', 
+                        //             [BDMGR4] = '${SET01[i].BDMGR4}', 
+                        //             [BDJP4] = '${SET01[i].BDJP4}', 
+                        //             [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
+                        //             [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
+                        //             [BDGL4_1] = '${SET01[i].BDGL4_1}', 
+                        //             [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
+                        //             [BDJP4_1] = '${SET01[i].BDJP4_1}', 
+                        //             [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
+                        //             [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
+                        //             [BDGL4_2] = '${SET01[i].BDGL4_2}', 
+                        //             [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
+                        //             [BDJP4_2] = '${SET01[i].BDJP4_2}', 
+                        //             [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
+                        //             [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
+                        //             [BDGL4_3] = '${SET01[i].GL4_3}', 
+                        //             [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
+                        //             [BDJP4_3] = '${SET01[i].BDJP4_3}', 
+                        //             [BDSent4] = '${SET01[i].BDSent4}',
+                        //             [Stage4] = '${SET01[i].Stage4}', 
+                        //             [Reason4] = '${SET01[i].Reason4}'
+                        //             WHERE [CustShort] = '${SET01[i].CustShort}' 
+                        //             AND [Month] = '${SET01[i].Month}' 
+                        //             AND [Year] = '${SET01[i].Year}'
+                        //             AND [ReqNo1] = '${SET01[i].ReqNo1}'
+                        //             AND [ReqNo2] = '${SET01[i].ReqNo2}'
+                        //             AND [ReqNo3] = '${SET01[i].ReqNo3}'
+                        //             AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
+                        //     await mssql.qurey(queryUpdate);
+                        //     // console.log(queryUpdate);
+                        //     // console.log("Update Complete " + i);
+                        // } else {
+                        var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_Overdue] 
                         ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [Request1], [TTCResult1], 
                         [IssueDate1], [Sublead1], [GL1], [MGR1], [JP1], [Revise1_1], [Sublead1_1], [GL1_1], [MGR1_1], [JP1_1], [Revise1_2], [Sublead1_2], [GL1_2], [MGR1_2], [JP1_2], [Revise1_3], [Sublead1_3], [GL1_3], [MGR1_3], [JP1_3], [BDPrepare1], [BDTTC1], [BDIssue1], [BDSublead1], [BDGL1], 
                         [BDMGR1], [BDJP1], [BDRevise1_1], [BDSublead1_1], [BDGL1_1], [BDMGR1_1], [BDJP1_1], [BDRevise1_2], [BDSublead1_2], [BDGL1_2], [BDMGR1_2], [BDJP1_2], [BDRevise1_3], [BDSublead1_3], [BDGL1_3], [BDMGR1_3], [BDJP1_3], [BDSent1], [Stage1], [Reason1], [ReqNo2], 
@@ -2149,10 +2154,10 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                         [BDSublead4_3], [BDGL4_3], [BDMGR4_3], [BDJP4_3], [BDSent4], [Stage4], [Reason4]) 
                         values `;
 
-                            for (i = 0; i < SET01.length; i++) {
-                                queryInsert =
-                                    queryInsert +
-                                    `( '${SET01[i].Type}'
+                        for (i = 0; i < SET01.length; i++) {
+                            queryInsert =
+                                queryInsert +
+                                `( '${SET01[i].Type}'
                                 ,'${SET01[i].MKTGroup}'
                                 ,'${SET01[i].Group}'
                                 ,'${SET01[i].Customer}'
@@ -2385,16 +2390,16 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                                 ,'${SET01[i].Stage4}'
                                 ,'${SET01[i].Reason4}'
                             )`;
-                                if (i !== SET01.length - 1) {
-                                    queryInsert = queryInsert + ",";
-                                }
+                            if (i !== SET01.length - 1) {
+                                queryInsert = queryInsert + ",";
                             }
-                            query = queryInsert + ";";
-                            // query = queryDelete + queryInsert + ";";
-                            await mssql.qurey(query);
-                            // console.log(query);
-                            // console.log("Insert Complete " + i);
                         }
+                        query = queryInsert + ";";
+                        // query = queryDelete + queryInsert + ";";
+                        await mssql.qurey(query);
+                        // console.log(query);
+                        // console.log("Insert Complete " + i);
+                        // }
                     }
                 } catch (err) {
                     console.error('Error executing SQL query:', err.message);
@@ -2422,6 +2427,8 @@ router.post('/02SARKPI/CustServiceChart', async (req, res) => {
     if (input['YEAR'] != undefined) {
         const year = input['YEAR'];
         const lastYear = year - 1;
+        const queryDelete = `DELETE FROM [SARKPI].[dbo].[KPI_CustService] WHERE Year IN (${year}, ${lastYear})`;
+        await mssql.qurey(queryDelete);
 
         const queryRequestLab = `
         SELECT * FROM [SAR].[dbo].[Routine_RequestLab]
@@ -2770,262 +2777,262 @@ router.post('/02SARKPI/CustServiceChart', async (req, res) => {
         console.log("SET01 " + SET01.length);
         try {
             for (let i = 0; i < SET01.length; i++) {
-                const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_CustService]
-                        WHERE [CustShort] = '${SET01[i].CustShort}' 
-                        AND [Month] = '${SET01[i].Month}' 
-                        AND [Year] = '${SET01[i].Year}'
-                        AND ([ReqNo1] = '${SET01[i].ReqNo1}'
-                        OR [ReqNo2] = '${SET01[i].ReqNo2}'
-                        OR [ReqNo3] = '${SET01[i].ReqNo3}'
-                        OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
-                const result = await mssql.qurey(queryCheck);
-                // console.log('queryCheck:' + queryCheck);
-                if (result.recordset[0].count > 0) {
-                    const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_CustService]
-                            SET [Type] = '${SET01[i].Type}', 
-                                [MKTGroup] = '${SET01[i].MKTGroup}', 
-                                [Group] = '${SET01[i].Group}', 
-                                [Customer] = '${SET01[i].Customer}', 
-                                [CustShort] = '${SET01[i].CustShort}', 
-                                [Frequency] = '${SET01[i].Frequency}', 
-                                [Incharge] = '${SET01[i].Incharge}', 
-                                [KPIServ] = '${SET01[i].KPIServ}', 
-                                [KPIPeriod] = '${SET01[i].KPIPeriod}', 
-                                [RepItems] = '${SET01[i].RepItems}', 
-                                [Month] = '${SET01[i].Month}', 
-                                [Year] = '${SET01[i].Year}', 
-                                [ReqNo1] = '${SET01[i].ReqNo1}', 
-                                [Freq1] = '${SET01[i].Freq1}', 
-                                [Evaluation1] = '${SET01[i].Evaluation1}', 
-                                [PlanSam1] = '${SET01[i].PlanSam1}', 
-                                [ActSam1] = '${SET01[i].ActSam1}', 
-                                [RepDue1] = '${SET01[i].RepDue1}', 
-                                [SentRep1] = '${SET01[i].SentRep1}', 
-                                [RepDays1] = '${SET01[i].RepDays1}', 
-                                [Request1] = '${SET01[i].Request1}', 
-                                [TTCResult1] = '${SET01[i].TTCResult1}', 
-                                [IssueDate1] = '${SET01[i].IssueDate1}', 
-                                [Sublead1] = '${SET01[i].Sublead1}', 
-                                [GL1] = '${SET01[i].GL1}', 
-                                [MGR1] = '${SET01[i].MGR1}', 
-                                [JP1] = '${SET01[i].JP1}', 
-                                [Revise1_1] = '${SET01[i].Revise1_1}', 
-                                [Sublead1_1] = '${SET01[i].Sublead1_1}', 
-                                [GL1_1] = '${SET01[i].GL1_1}', 
-                                [MGR1_1] = '${SET01[i].MGR1_1}', 
-                                [JP1_1] = '${SET01[i].JP1_1}', 
-                                [Revise1_2] = '${SET01[i].Revise1_2}', 
-                                [Sublead1_2] = '${SET01[i].Sublead1_2}', 
-                                [GL1_2] = '${SET01[i].GL1_2}', 
-                                [MGR1_2] = '${SET01[i].MGR1_2}', 
-                                [JP1_2] = '${SET01[i].JP1_2}', 
-                                [Revise1_3] = '${SET01[i].Revise1_3}', 
-                                [Sublead1_3] = '${SET01[i].Sublead1_3}', 
-                                [GL1_3] = '${SET01[i].GL1_3}', 
-                                [MGR1_3] = '${SET01[i].MGR1_3}', 
-                                [JP1_3] = '${SET01[i].JP1_3}', 
-                                [BDPrepare1] = '${SET01[i].BDPrepare1}', 
-                                [BDTTC1] = '${SET01[i].BDTTC1}', 
-                                [BDIssue1] = '${SET01[i].BDIssue1}', 
-                                [BDSublead1] = '${SET01[i].BDSublead1}', 
-                                [BDGL1] = '${SET01[i].BDGL1}', 
-                                [BDMGR1] = '${SET01[i].BDMGR1}', 
-                                [BDJP1] = '${SET01[i].BDJP1}', 
-                                [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
-                                [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
-                                [BDGL1_1] = '${SET01[i].BDGL1_1}', 
-                                [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
-                                [BDJP1_1] = '${SET01[i].BDJP1_1}', 
-                                [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
-                                [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
-                                [BDGL1_2] = '${SET01[i].BDGL1_2}', 
-                                [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
-                                [BDJP1_2] = '${SET01[i].BDJP1_2}', 
-                                [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
-                                [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
-                                [BDGL1_3] = '${SET01[i].BDGL1_3}', 
-                                [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
-                                [BDJP1_3] = '${SET01[i].BDJP1_3}', 
-                                [BDSent1] = '${SET01[i].BDSent1}', 
-                                [Stage1] = '${SET01[i].Stage1}',
-                                [Reason1] = '${SET01[i].Reason1}', 
-                                [ReqNo2] = '${SET01[i].ReqNo2}', 
-                                [Freq2] = '${SET01[i].Freq2}', 
-                                [Evaluation2] = '${SET01[i].Evaluation2}', 
-                                [PlanSam2] = '${SET01[i].PlanSam2}', 
-                                [ActSam2] = '${SET01[i].ActSam2}', 
-                                [RepDue2] = '${SET01[i].RepDue2}', 
-                                [SentRep2] = '${SET01[i].SentRep2}', 
-                                [RepDays2] = '${SET01[i].RepDays2}', 
-                                [Request2] = '${SET01[i].Request2}', 
-                                [TTCResult2] = '${SET01[i].TTCResult2}', 
-                                [IssueDate2] = '${SET01[i].IssueDate2}', 
-                                [Sublead2] = '${SET01[i].Sublead2}', 
-                                [GL2] = '${SET01[i].GL2}', 
-                                [MGR2] = '${SET01[i].MGR2}', 
-                                [JP2] = '${SET01[i].JP2}', 
-                                [Revise2_1] = '${SET01[i].Revise2_1}', 
-                                [Sublead2_1] = '${SET01[i].Sublead2_1}', 
-                                [GL2_1] = '${SET01[i].GL2_1}', 
-                                [MGR2_1] = '${SET01[i].MGR2_1}', 
-                                [JP2_1] = '${SET01[i].JP2_1}', 
-                                [Revise2_2] = '${SET01[i].Revise2_2}', 
-                                [Sublead2_2] = '${SET01[i].Sublead2_2}', 
-                                [GL2_2] = '${SET01[i].GL2_2}', 
-                                [MGR2_2] = '${SET01[i].MGR2_2}', 
-                                [JP2_2] = '${SET01[i].JP2_2}', 
-                                [Revise2_3] = '${SET01[i].Revise2_3}', 
-                                [Sublead2_3] = '${SET01[i].Sublead2_3}', 
-                                [GL2_3] = '${SET01[i].GL2_3}', 
-                                [MGR2_3] = '${SET01[i].MGR2_3}', 
-                                [JP2_3] = '${SET01[i].JP2_3}', 
-                                [BDPrepare2] = '${SET01[i].BDPrepare2}', 
-                                [BDTTC2] = '${SET01[i].BDTTC2}', 
-                                [BDIssue2] = '${SET01[i].BDIssue2}', 
-                                [BDSublead2] = '${SET01[i].BDSublead2}', 
-                                [BDGL2] = '${SET01[i].BDGL2}', 
-                                [BDMGR2] = '${SET01[i].BDMGR2}', 
-                                [BDJP2] = '${SET01[i].BDJP2}', 
-                                [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
-                                [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
-                                [BDGL2_1] = '${SET01[i].BDGL2_1}', 
-                                [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
-                                [BDJP2_1] = '${SET01[i].BDJP2_1}', 
-                                [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
-                                [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
-                                [BDGL2_2] = '${SET01[i].BDGL2_2}', 
-                                [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
-                                [BDJP2_2] = '${SET01[i].BDJP2_2}', 
-                                [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
-                                [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
-                                [BDGL2_3] = '${SET01[i].BDGL2_3}', 
-                                [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
-                                [BDJP2_3] = '${SET01[i].BDJP2_3}', 
-                                [BDSent2] = '${SET01[i].BDSent2}', 
-                                [Stage2] = '${SET01[i].Stage2}',
-                                [Reason2] = '${SET01[i].Reason2}', 
-                                [ReqNo3] = '${SET01[i].ReqNo3}', 
-                                [Freq3] = '${SET01[i].Freq3}', 
-                                [Evaluation3] = '${SET01[i].Evaluation3}', 
-                                [PlanSam3] = '${SET01[i].PlanSam3}', 
-                                [ActSam3] = '${SET01[i].ActSam3}', 
-                                [RepDue3] = '${SET01[i].RepDue3}', 
-                                [SentRep3] = '${SET01[i].SentRep3}', 
-                                [RepDays3] = '${SET01[i].RepDays3}', 
-                                [Request3] = '${SET01[i].Request3}', 
-                                [TTCResult3] = '${SET01[i].TTCResult3}', 
-                                [IssueDate3] = '${SET01[i].IssueDate3}', 
-                                [Sublead3] = '${SET01[i].Sublead3}', 
-                                [GL3] = '${SET01[i].GL3}', 
-                                [MGR3] = '${SET01[i].MGR3}', 
-                                [JP3] = '${SET01[i].JP3}', 
-                                [Revise3_1] = '${SET01[i].Revise3_1}', 
-                                [Sublead3_1] = '${SET01[i].Sublead3_1}', 
-                                [GL3_1] = '${SET01[i].GL3_1}', 
-                                [MGR3_1] = '${SET01[i].MGR3_1}', 
-                                [JP3_1] = '${SET01[i].JP3_1}', 
-                                [Revise3_2] = '${SET01[i].Revise3_2}', 
-                                [Sublead3_2] = '${SET01[i].Sublead3_2}', 
-                                [GL3_2] = '${SET01[i].GL3_2}', 
-                                [MGR3_2] = '${SET01[i].MGR3_2}', 
-                                [JP3_2] = '${SET01[i].JP3_2}', 
-                                [Revise3_3] = '${SET01[i].Revise3_3}', 
-                                [Sublead3_3] = '${SET01[i].Sublead3_3}', 
-                                [GL3_3] = '${SET01[i].GL3_3}', 
-                                [MGR3_3] = '${SET01[i].MGR3_3}', 
-                                [JP3_3] = '${SET01[i].JP3_3}', 
-                                [BDPrepare3] = '${SET01[i].BDPrepare3}', 
-                                [BDTTC3] = '${SET01[i].BDTTC3}', 
-                                [BDIssue3] = '${SET01[i].BDIssue3}', 
-                                [BDSublead3] = '${SET01[i].BDSublead3}', 
-                                [BDGL3] = '${SET01[i].BDGL3}', 
-                                [BDMGR3] = '${SET01[i].BDMGR3}', 
-                                [BDJP3] = '${SET01[i].BDJP3}', 
-                                [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
-                                [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
-                                [BDGL3_1] = '${SET01[i].BDGL3_1}', 
-                                [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
-                                [BDJP3_1] = '${SET01[i].BDJP3_1}', 
-                                [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
-                                [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
-                                [BDGL3_2] = '${SET01[i].BDGL3_2}', 
-                                [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
-                                [BDJP3_2] = '${SET01[i].BDJP3_2}', 
-                                [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
-                                [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
-                                [BDGL3_3] = '${SET01[i].BDGL3_3}', 
-                                [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
-                                [BDJP3_3] = '${SET01[i].BDJP3_3}', 
-                                [BDSent3] = '${SET01[i].BDSent3}', 
-                                [Stage3] = '${SET01[i].Stage3}',
-                                [Reason3] = '${SET01[i].Reason3}', 
-                                [ReqNo4] = '${SET01[i].ReqNo4}', 
-                                [Freq4] = '${SET01[i].Freq4}', 
-                                [Evaluation4] = '${SET01[i].Evaluation4}', 
-                                [PlanSam4] = '${SET01[i].PlanSam4}', 
-                                [ActSam4] = '${SET01[i].ActSam4}', 
-                                [RepDue4] = '${SET01[i].RepDue4}', 
-                                [SentRep4] = '${SET01[i].SentRep4}', 
-                                [RepDays4] = '${SET01[i].RepDays4}', 
-                                [Request4] = '${SET01[i].Request4}', 
-                                [TTCResult4] = '${SET01[i].TTCResult4}', 
-                                [IssueDate4] = '${SET01[i].IssueDate4}', 
-                                [Sublead4] = '${SET01[i].Sublead4}', 
-                                [GL4] = '${SET01[i].GL4}', 
-                                [MGR4] = '${SET01[i].MGR4}', 
-                                [JP4] = '${SET01[i].JP4}', 
-                                [Revise4_1] = '${SET01[i].Revise4_1}', 
-                                [Sublead4_1] = '${SET01[i].Sublead4_1}', 
-                                [GL4_1] = '${SET01[i].GL4_1}', 
-                                [MGR4_1] = '${SET01[i].MGR4_1}', 
-                                [JP4_1] = '${SET01[i].JP4_1}', 
-                                [Revise4_2] = '${SET01[i].Revise4_2}', 
-                                [Sublead4_2] = '${SET01[i].Sublead4_2}', 
-                                [GL4_2] = '${SET01[i].GL4_2}', 
-                                [MGR4_2] = '${SET01[i].MGR4_2}', 
-                                [JP4_2] = '${SET01[i].JP4_2}', 
-                                [Revise4_3] = '${SET01[i].Revise4_3}', 
-                                [Sublead4_3] = '${SET01[i].Sublead4_3}', 
-                                [GL4_3] = '${SET01[i].GL4_3}', 
-                                [MGR4_3] = '${SET01[i].MGR4_3}', 
-                                [JP4_3] = '${SET01[i].JP4_3}', 
-                                [BDPrepare4] = '${SET01[i].BDPrepare4}', 
-                                [BDTTC4] = '${SET01[i].BDTTC4}', 
-                                [BDIssue4] = '${SET01[i].BDIssue4}', 
-                                [BDSublead4] = '${SET01[i].BDSublead4}', 
-                                [BDGL4] = '${SET01[i].BDGL4}', 
-                                [BDMGR4] = '${SET01[i].BDMGR4}', 
-                                [BDJP4] = '${SET01[i].BDJP4}', 
-                                [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
-                                [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
-                                [BDGL4_1] = '${SET01[i].BDGL4_1}', 
-                                [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
-                                [BDJP4_1] = '${SET01[i].BDJP4_1}', 
-                                [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
-                                [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
-                                [BDGL4_2] = '${SET01[i].BDGL4_2}', 
-                                [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
-                                [BDJP4_2] = '${SET01[i].BDJP4_2}', 
-                                [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
-                                [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
-                                [BDGL4_3] = '${SET01[i].GL4_3}', 
-                                [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
-                                [BDJP4_3] = '${SET01[i].BDJP4_3}', 
-                                [BDSent4] = '${SET01[i].BDSent4}',
-                                [Stage4] = '${SET01[i].Stage4}', 
-                                [Reason4] = '${SET01[i].Reason4}'
-                                WHERE [CustShort] = '${SET01[i].CustShort}' 
-                                AND [Month] = '${SET01[i].Month}' 
-                                AND [Year] = '${SET01[i].Year}'
-                                AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                                AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                                AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                                AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
-                    await mssql.qurey(queryUpdate);
-                    // console.log('queryUpdate:' + queryUpdate);
-                    // console.log("Update Complete " + i);
-                } else {
-                    var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_CustService] 
+                // const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_CustService]
+                //         WHERE [CustShort] = '${SET01[i].CustShort}' 
+                //         AND [Month] = '${SET01[i].Month}' 
+                //         AND [Year] = '${SET01[i].Year}'
+                //         AND ([ReqNo1] = '${SET01[i].ReqNo1}'
+                //         OR [ReqNo2] = '${SET01[i].ReqNo2}'
+                //         OR [ReqNo3] = '${SET01[i].ReqNo3}'
+                //         OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
+                // const result = await mssql.qurey(queryCheck);
+                // // console.log('queryCheck:' + queryCheck);
+                // if (result.recordset[0].count > 0) {
+                //     const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_CustService]
+                //             SET [Type] = '${SET01[i].Type}', 
+                //                 [MKTGroup] = '${SET01[i].MKTGroup}', 
+                //                 [Group] = '${SET01[i].Group}', 
+                //                 [Customer] = '${SET01[i].Customer}', 
+                //                 [CustShort] = '${SET01[i].CustShort}', 
+                //                 [Frequency] = '${SET01[i].Frequency}', 
+                //                 [Incharge] = '${SET01[i].Incharge}', 
+                //                 [KPIServ] = '${SET01[i].KPIServ}', 
+                //                 [KPIPeriod] = '${SET01[i].KPIPeriod}', 
+                //                 [RepItems] = '${SET01[i].RepItems}', 
+                //                 [Month] = '${SET01[i].Month}', 
+                //                 [Year] = '${SET01[i].Year}', 
+                //                 [ReqNo1] = '${SET01[i].ReqNo1}', 
+                //                 [Freq1] = '${SET01[i].Freq1}', 
+                //                 [Evaluation1] = '${SET01[i].Evaluation1}', 
+                //                 [PlanSam1] = '${SET01[i].PlanSam1}', 
+                //                 [ActSam1] = '${SET01[i].ActSam1}', 
+                //                 [RepDue1] = '${SET01[i].RepDue1}', 
+                //                 [SentRep1] = '${SET01[i].SentRep1}', 
+                //                 [RepDays1] = '${SET01[i].RepDays1}', 
+                //                 [Request1] = '${SET01[i].Request1}', 
+                //                 [TTCResult1] = '${SET01[i].TTCResult1}', 
+                //                 [IssueDate1] = '${SET01[i].IssueDate1}', 
+                //                 [Sublead1] = '${SET01[i].Sublead1}', 
+                //                 [GL1] = '${SET01[i].GL1}', 
+                //                 [MGR1] = '${SET01[i].MGR1}', 
+                //                 [JP1] = '${SET01[i].JP1}', 
+                //                 [Revise1_1] = '${SET01[i].Revise1_1}', 
+                //                 [Sublead1_1] = '${SET01[i].Sublead1_1}', 
+                //                 [GL1_1] = '${SET01[i].GL1_1}', 
+                //                 [MGR1_1] = '${SET01[i].MGR1_1}', 
+                //                 [JP1_1] = '${SET01[i].JP1_1}', 
+                //                 [Revise1_2] = '${SET01[i].Revise1_2}', 
+                //                 [Sublead1_2] = '${SET01[i].Sublead1_2}', 
+                //                 [GL1_2] = '${SET01[i].GL1_2}', 
+                //                 [MGR1_2] = '${SET01[i].MGR1_2}', 
+                //                 [JP1_2] = '${SET01[i].JP1_2}', 
+                //                 [Revise1_3] = '${SET01[i].Revise1_3}', 
+                //                 [Sublead1_3] = '${SET01[i].Sublead1_3}', 
+                //                 [GL1_3] = '${SET01[i].GL1_3}', 
+                //                 [MGR1_3] = '${SET01[i].MGR1_3}', 
+                //                 [JP1_3] = '${SET01[i].JP1_3}', 
+                //                 [BDPrepare1] = '${SET01[i].BDPrepare1}', 
+                //                 [BDTTC1] = '${SET01[i].BDTTC1}', 
+                //                 [BDIssue1] = '${SET01[i].BDIssue1}', 
+                //                 [BDSublead1] = '${SET01[i].BDSublead1}', 
+                //                 [BDGL1] = '${SET01[i].BDGL1}', 
+                //                 [BDMGR1] = '${SET01[i].BDMGR1}', 
+                //                 [BDJP1] = '${SET01[i].BDJP1}', 
+                //                 [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
+                //                 [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
+                //                 [BDGL1_1] = '${SET01[i].BDGL1_1}', 
+                //                 [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
+                //                 [BDJP1_1] = '${SET01[i].BDJP1_1}', 
+                //                 [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
+                //                 [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
+                //                 [BDGL1_2] = '${SET01[i].BDGL1_2}', 
+                //                 [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
+                //                 [BDJP1_2] = '${SET01[i].BDJP1_2}', 
+                //                 [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
+                //                 [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
+                //                 [BDGL1_3] = '${SET01[i].BDGL1_3}', 
+                //                 [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
+                //                 [BDJP1_3] = '${SET01[i].BDJP1_3}', 
+                //                 [BDSent1] = '${SET01[i].BDSent1}', 
+                //                 [Stage1] = '${SET01[i].Stage1}',
+                //                 [Reason1] = '${SET01[i].Reason1}', 
+                //                 [ReqNo2] = '${SET01[i].ReqNo2}', 
+                //                 [Freq2] = '${SET01[i].Freq2}', 
+                //                 [Evaluation2] = '${SET01[i].Evaluation2}', 
+                //                 [PlanSam2] = '${SET01[i].PlanSam2}', 
+                //                 [ActSam2] = '${SET01[i].ActSam2}', 
+                //                 [RepDue2] = '${SET01[i].RepDue2}', 
+                //                 [SentRep2] = '${SET01[i].SentRep2}', 
+                //                 [RepDays2] = '${SET01[i].RepDays2}', 
+                //                 [Request2] = '${SET01[i].Request2}', 
+                //                 [TTCResult2] = '${SET01[i].TTCResult2}', 
+                //                 [IssueDate2] = '${SET01[i].IssueDate2}', 
+                //                 [Sublead2] = '${SET01[i].Sublead2}', 
+                //                 [GL2] = '${SET01[i].GL2}', 
+                //                 [MGR2] = '${SET01[i].MGR2}', 
+                //                 [JP2] = '${SET01[i].JP2}', 
+                //                 [Revise2_1] = '${SET01[i].Revise2_1}', 
+                //                 [Sublead2_1] = '${SET01[i].Sublead2_1}', 
+                //                 [GL2_1] = '${SET01[i].GL2_1}', 
+                //                 [MGR2_1] = '${SET01[i].MGR2_1}', 
+                //                 [JP2_1] = '${SET01[i].JP2_1}', 
+                //                 [Revise2_2] = '${SET01[i].Revise2_2}', 
+                //                 [Sublead2_2] = '${SET01[i].Sublead2_2}', 
+                //                 [GL2_2] = '${SET01[i].GL2_2}', 
+                //                 [MGR2_2] = '${SET01[i].MGR2_2}', 
+                //                 [JP2_2] = '${SET01[i].JP2_2}', 
+                //                 [Revise2_3] = '${SET01[i].Revise2_3}', 
+                //                 [Sublead2_3] = '${SET01[i].Sublead2_3}', 
+                //                 [GL2_3] = '${SET01[i].GL2_3}', 
+                //                 [MGR2_3] = '${SET01[i].MGR2_3}', 
+                //                 [JP2_3] = '${SET01[i].JP2_3}', 
+                //                 [BDPrepare2] = '${SET01[i].BDPrepare2}', 
+                //                 [BDTTC2] = '${SET01[i].BDTTC2}', 
+                //                 [BDIssue2] = '${SET01[i].BDIssue2}', 
+                //                 [BDSublead2] = '${SET01[i].BDSublead2}', 
+                //                 [BDGL2] = '${SET01[i].BDGL2}', 
+                //                 [BDMGR2] = '${SET01[i].BDMGR2}', 
+                //                 [BDJP2] = '${SET01[i].BDJP2}', 
+                //                 [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
+                //                 [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
+                //                 [BDGL2_1] = '${SET01[i].BDGL2_1}', 
+                //                 [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
+                //                 [BDJP2_1] = '${SET01[i].BDJP2_1}', 
+                //                 [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
+                //                 [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
+                //                 [BDGL2_2] = '${SET01[i].BDGL2_2}', 
+                //                 [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
+                //                 [BDJP2_2] = '${SET01[i].BDJP2_2}', 
+                //                 [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
+                //                 [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
+                //                 [BDGL2_3] = '${SET01[i].BDGL2_3}', 
+                //                 [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
+                //                 [BDJP2_3] = '${SET01[i].BDJP2_3}', 
+                //                 [BDSent2] = '${SET01[i].BDSent2}', 
+                //                 [Stage2] = '${SET01[i].Stage2}',
+                //                 [Reason2] = '${SET01[i].Reason2}', 
+                //                 [ReqNo3] = '${SET01[i].ReqNo3}', 
+                //                 [Freq3] = '${SET01[i].Freq3}', 
+                //                 [Evaluation3] = '${SET01[i].Evaluation3}', 
+                //                 [PlanSam3] = '${SET01[i].PlanSam3}', 
+                //                 [ActSam3] = '${SET01[i].ActSam3}', 
+                //                 [RepDue3] = '${SET01[i].RepDue3}', 
+                //                 [SentRep3] = '${SET01[i].SentRep3}', 
+                //                 [RepDays3] = '${SET01[i].RepDays3}', 
+                //                 [Request3] = '${SET01[i].Request3}', 
+                //                 [TTCResult3] = '${SET01[i].TTCResult3}', 
+                //                 [IssueDate3] = '${SET01[i].IssueDate3}', 
+                //                 [Sublead3] = '${SET01[i].Sublead3}', 
+                //                 [GL3] = '${SET01[i].GL3}', 
+                //                 [MGR3] = '${SET01[i].MGR3}', 
+                //                 [JP3] = '${SET01[i].JP3}', 
+                //                 [Revise3_1] = '${SET01[i].Revise3_1}', 
+                //                 [Sublead3_1] = '${SET01[i].Sublead3_1}', 
+                //                 [GL3_1] = '${SET01[i].GL3_1}', 
+                //                 [MGR3_1] = '${SET01[i].MGR3_1}', 
+                //                 [JP3_1] = '${SET01[i].JP3_1}', 
+                //                 [Revise3_2] = '${SET01[i].Revise3_2}', 
+                //                 [Sublead3_2] = '${SET01[i].Sublead3_2}', 
+                //                 [GL3_2] = '${SET01[i].GL3_2}', 
+                //                 [MGR3_2] = '${SET01[i].MGR3_2}', 
+                //                 [JP3_2] = '${SET01[i].JP3_2}', 
+                //                 [Revise3_3] = '${SET01[i].Revise3_3}', 
+                //                 [Sublead3_3] = '${SET01[i].Sublead3_3}', 
+                //                 [GL3_3] = '${SET01[i].GL3_3}', 
+                //                 [MGR3_3] = '${SET01[i].MGR3_3}', 
+                //                 [JP3_3] = '${SET01[i].JP3_3}', 
+                //                 [BDPrepare3] = '${SET01[i].BDPrepare3}', 
+                //                 [BDTTC3] = '${SET01[i].BDTTC3}', 
+                //                 [BDIssue3] = '${SET01[i].BDIssue3}', 
+                //                 [BDSublead3] = '${SET01[i].BDSublead3}', 
+                //                 [BDGL3] = '${SET01[i].BDGL3}', 
+                //                 [BDMGR3] = '${SET01[i].BDMGR3}', 
+                //                 [BDJP3] = '${SET01[i].BDJP3}', 
+                //                 [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
+                //                 [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
+                //                 [BDGL3_1] = '${SET01[i].BDGL3_1}', 
+                //                 [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
+                //                 [BDJP3_1] = '${SET01[i].BDJP3_1}', 
+                //                 [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
+                //                 [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
+                //                 [BDGL3_2] = '${SET01[i].BDGL3_2}', 
+                //                 [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
+                //                 [BDJP3_2] = '${SET01[i].BDJP3_2}', 
+                //                 [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
+                //                 [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
+                //                 [BDGL3_3] = '${SET01[i].BDGL3_3}', 
+                //                 [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
+                //                 [BDJP3_3] = '${SET01[i].BDJP3_3}', 
+                //                 [BDSent3] = '${SET01[i].BDSent3}', 
+                //                 [Stage3] = '${SET01[i].Stage3}',
+                //                 [Reason3] = '${SET01[i].Reason3}', 
+                //                 [ReqNo4] = '${SET01[i].ReqNo4}', 
+                //                 [Freq4] = '${SET01[i].Freq4}', 
+                //                 [Evaluation4] = '${SET01[i].Evaluation4}', 
+                //                 [PlanSam4] = '${SET01[i].PlanSam4}', 
+                //                 [ActSam4] = '${SET01[i].ActSam4}', 
+                //                 [RepDue4] = '${SET01[i].RepDue4}', 
+                //                 [SentRep4] = '${SET01[i].SentRep4}', 
+                //                 [RepDays4] = '${SET01[i].RepDays4}', 
+                //                 [Request4] = '${SET01[i].Request4}', 
+                //                 [TTCResult4] = '${SET01[i].TTCResult4}', 
+                //                 [IssueDate4] = '${SET01[i].IssueDate4}', 
+                //                 [Sublead4] = '${SET01[i].Sublead4}', 
+                //                 [GL4] = '${SET01[i].GL4}', 
+                //                 [MGR4] = '${SET01[i].MGR4}', 
+                //                 [JP4] = '${SET01[i].JP4}', 
+                //                 [Revise4_1] = '${SET01[i].Revise4_1}', 
+                //                 [Sublead4_1] = '${SET01[i].Sublead4_1}', 
+                //                 [GL4_1] = '${SET01[i].GL4_1}', 
+                //                 [MGR4_1] = '${SET01[i].MGR4_1}', 
+                //                 [JP4_1] = '${SET01[i].JP4_1}', 
+                //                 [Revise4_2] = '${SET01[i].Revise4_2}', 
+                //                 [Sublead4_2] = '${SET01[i].Sublead4_2}', 
+                //                 [GL4_2] = '${SET01[i].GL4_2}', 
+                //                 [MGR4_2] = '${SET01[i].MGR4_2}', 
+                //                 [JP4_2] = '${SET01[i].JP4_2}', 
+                //                 [Revise4_3] = '${SET01[i].Revise4_3}', 
+                //                 [Sublead4_3] = '${SET01[i].Sublead4_3}', 
+                //                 [GL4_3] = '${SET01[i].GL4_3}', 
+                //                 [MGR4_3] = '${SET01[i].MGR4_3}', 
+                //                 [JP4_3] = '${SET01[i].JP4_3}', 
+                //                 [BDPrepare4] = '${SET01[i].BDPrepare4}', 
+                //                 [BDTTC4] = '${SET01[i].BDTTC4}', 
+                //                 [BDIssue4] = '${SET01[i].BDIssue4}', 
+                //                 [BDSublead4] = '${SET01[i].BDSublead4}', 
+                //                 [BDGL4] = '${SET01[i].BDGL4}', 
+                //                 [BDMGR4] = '${SET01[i].BDMGR4}', 
+                //                 [BDJP4] = '${SET01[i].BDJP4}', 
+                //                 [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
+                //                 [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
+                //                 [BDGL4_1] = '${SET01[i].BDGL4_1}', 
+                //                 [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
+                //                 [BDJP4_1] = '${SET01[i].BDJP4_1}', 
+                //                 [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
+                //                 [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
+                //                 [BDGL4_2] = '${SET01[i].BDGL4_2}', 
+                //                 [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
+                //                 [BDJP4_2] = '${SET01[i].BDJP4_2}', 
+                //                 [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
+                //                 [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
+                //                 [BDGL4_3] = '${SET01[i].GL4_3}', 
+                //                 [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
+                //                 [BDJP4_3] = '${SET01[i].BDJP4_3}', 
+                //                 [BDSent4] = '${SET01[i].BDSent4}',
+                //                 [Stage4] = '${SET01[i].Stage4}', 
+                //                 [Reason4] = '${SET01[i].Reason4}'
+                //                 WHERE [CustShort] = '${SET01[i].CustShort}' 
+                //                 AND [Month] = '${SET01[i].Month}' 
+                //                 AND [Year] = '${SET01[i].Year}'
+                //                 AND [ReqNo1] = '${SET01[i].ReqNo1}'
+                //                 AND [ReqNo2] = '${SET01[i].ReqNo2}'
+                //                 AND [ReqNo3] = '${SET01[i].ReqNo3}'
+                //                 AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
+                //     await mssql.qurey(queryUpdate);
+                //     // console.log('queryUpdate:' + queryUpdate);
+                //     // console.log("Update Complete " + i);
+                // } else {
+                var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_CustService] 
                     ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [Request1], [TTCResult1], 
                     [IssueDate1], [Sublead1], [GL1], [MGR1], [JP1], [Revise1_1], [Sublead1_1], [GL1_1], [MGR1_1], [JP1_1], [Revise1_2], [Sublead1_2], [GL1_2], [MGR1_2], [JP1_2], [Revise1_3], [Sublead1_3], [GL1_3], [MGR1_3], [JP1_3], [BDPrepare1], [BDTTC1], [BDIssue1], [BDSublead1], [BDGL1], 
                     [BDMGR1], [BDJP1], [BDRevise1_1], [BDSublead1_1], [BDGL1_1], [BDMGR1_1], [BDJP1_1], [BDRevise1_2], [BDSublead1_2], [BDGL1_2], [BDMGR1_2], [BDJP1_2], [BDRevise1_3], [BDSublead1_3], [BDGL1_3], [BDMGR1_3], [BDJP1_3], [BDSent1], [Stage1], [Reason1], [ReqNo2], 
@@ -3039,10 +3046,10 @@ router.post('/02SARKPI/CustServiceChart', async (req, res) => {
                     [BDSublead4_3], [BDGL4_3], [BDMGR4_3], [BDJP4_3], [BDSent4], [Stage4], [Reason4]) 
                     values `;
 
-                    // for (i = 0; i < SET01.length; i++) {
-                    queryInsert =
-                        queryInsert +
-                        `( '${SET01[i].Type}'
+                // for (i = 0; i < SET01.length; i++) {
+                queryInsert =
+                    queryInsert +
+                    `( '${SET01[i].Type}'
                             ,'${SET01[i].MKTGroup}'
                             ,'${SET01[i].Group}'
                             ,'${SET01[i].Customer}'
@@ -3275,16 +3282,16 @@ router.post('/02SARKPI/CustServiceChart', async (req, res) => {
                             ,'${SET01[i].Stage4}'
                             ,'${SET01[i].Reason4}'
                         )`;
-                    // if (i !== SET01.length - 1) {
-                    //     queryInsert = queryInsert + ",";
-                    // }
-                    // }
-                    query = queryInsert + ";";
-                    // query = queryDelete + queryInsert + ";";
-                    await mssql.qurey(query);
-                    // console.log('query:' + query);
-                    // console.log("Insert Complete " + i);
-                }
+                // if (i !== SET01.length - 1) {
+                //     queryInsert = queryInsert + ",";
+                // }
+                // }
+                query = queryInsert + ";";
+                // query = queryDelete + queryInsert + ";";
+                await mssql.qurey(query);
+                // console.log('query:' + query);
+                // console.log("Insert Complete " + i);
+                // }
             }
         } catch (err) {
             console.error('Error executing SQL query:', err.message);
@@ -3307,6 +3314,8 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
     await loadRoutineKACReport();
     await loadHolidays();
     if (input['YEAR'] != undefined) {
+        const queryDelete = `DELETE FROM [SARKPI].[dbo].[KPI_ReportOverKPI] WHERE Year = ${input['YEAR']}`;
+        await mssql.qurey(queryDelete);
         for (let p = 0; p < 12; p++) {
             let Round = (p + 1).toString().padStart(2, '0');
             const currentMonth = new Date().getMonth() + 1;
@@ -3349,7 +3358,7 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                 const requestRecordsMap = {};
                 for (let i = 0; i < requestRecords.length; i++) {
                     const req = requestRecords[i];
-                    const custShort = req.CustShort?.trim();
+                    const custShort = req.CustShort;
                     if (custShort) {
                         if (!requestRecordsMap[custShort]) {
                             requestRecordsMap[custShort] = [];
@@ -3364,9 +3373,9 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                     "MKTGroup": record['MKTGROUP'],
                     "Group": record['GROUP'],
                     "Customer": record['CustFull'],
-                    "CustShort": record['CustShort'].trim(),
+                    "CustShort": record['CustShort'],
                     "Frequency": record['FRE'],
-                    "Incharge": record['Incharge'].trim(),
+                    "Incharge": record['Incharge'],
                     "KPIServ": record['GROUP'] === 'KAC' ? '100' : (record['GROUP'] === 'MEDIUM' ? '95' : record['KPIServ']),
                     "KPIPeriod": record['TYPE'] === 'A' ? '12' : (record['TYPE'] === 'B' ? '10' : record['KPIPERIOD']),
                     "RepItems": record['REPORTITEMS'],
@@ -3771,6 +3780,7 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                         switch (week) {
                             case 1:
                                 entry["ReqNo1"] = reqNo;
+                                entry["RepDue1"] = RepDue.RepDue;
                                 entry["RepDays1"] = RepDays;
                                 entry["BDPrepare1"] = BDPrepare;
                                 entry["BDTTC1"] = BDTTC;
@@ -3798,6 +3808,7 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                                 break;
                             case 2:
                                 entry["ReqNo2"] = reqNo;
+                                entry["RepDue2"] = RepDue.RepDue;
                                 entry["RepDays2"] = RepDays;
                                 entry["BDPrepare2"] = BDPrepare;
                                 entry["BDTTC2"] = BDTTC;
@@ -3825,6 +3836,7 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                                 break;
                             case 3:
                                 entry["ReqNo3"] = reqNo;
+                                entry["RepDue3"] = RepDue.RepDue;
                                 entry["RepDays3"] = RepDays;
                                 entry["BDPrepare3"] = BDPrepare;
                                 entry["BDTTC3"] = BDTTC;
@@ -3852,6 +3864,7 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                                 break;
                             case 4:
                                 entry["ReqNo4"] = reqNo;
+                                entry["RepDue4"] = RepDue.RepDue;
                                 entry["RepDays4"] = RepDays;
                                 entry["BDPrepare4"] = BDPrepare;
                                 entry["BDTTC4"] = BDTTC;
@@ -3899,261 +3912,257 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                 }
                 try {
                     for (let i = 0; i < SET01.length; i++) {
-                        const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_ReportOverKPI]
-                            WHERE [CustShort] = '${SET01[i].CustShort}' 
-                            AND [Month] = '${SET01[i].Month}' 
-                            AND [Year] = '${SET01[i].Year}'
-                            AND ([ReqNo1] = '${SET01[i].ReqNo1}'
-                            OR [ReqNo2] = '${SET01[i].ReqNo2}'
-                            OR [ReqNo3] = '${SET01[i].ReqNo3}'
-                            OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
-                        const result = await mssql.qurey(queryCheck);
-                        if (result.recordset[0].count > 0) {
-                            const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_ReportOverKPI]
-                                 SET [Type] = '${SET01[i].Type}', 
-                                    [MKTGroup] = '${SET01[i].MKTGroup}', 
-                                    [Group] = '${SET01[i].Group}', 
-                                    [Customer] = '${SET01[i].Customer}', 
-                                    [CustShort] = '${SET01[i].CustShort}', 
-                                    [Frequency] = '${SET01[i].Frequency}', 
-                                    [Incharge] = '${SET01[i].Incharge}', 
-                                    [KPIServ] = '${SET01[i].KPIServ}', 
-                                    [KPIPeriod] = '${SET01[i].KPIPeriod}', 
-                                    [RepItems] = '${SET01[i].RepItems}', 
-                                    [Month] = '${SET01[i].Month}', 
-                                    [Year] = '${SET01[i].Year}', 
-                                    [ReqNo1] = '${SET01[i].ReqNo1}', 
-                                    [Freq1] = '${SET01[i].Freq1}', 
-                                    [Evaluation1] = '${SET01[i].Evaluation1}', 
-                                    [PlanSam1] = '${SET01[i].PlanSam1}', 
-                                    [ActSam1] = '${SET01[i].ActSam1}', 
-                                    [RepDue1] = '${SET01[i].RepDue1}', 
-                                    [SentRep1] = '${SET01[i].SentRep1}', 
-                                    [RepDays1] = '${SET01[i].RepDays1}', 
-                                    [Request1] = '${SET01[i].Request1}', 
-                                    [TTCResult1] = '${SET01[i].TTCResult1}', 
-                                    [IssueDate1] = '${SET01[i].IssueDate1}', 
-                                    [Sublead1] = '${SET01[i].Sublead1}', 
-                                    [GL1] = '${SET01[i].GL1}', 
-                                    [MGR1] = '${SET01[i].MGR1}', 
-                                    [JP1] = '${SET01[i].JP1}', 
-                                    [Revise1_1] = '${SET01[i].Revise1_1}', 
-                                    [Sublead1_1] = '${SET01[i].Sublead1_1}', 
-                                    [GL1_1] = '${SET01[i].GL1_1}', 
-                                    [MGR1_1] = '${SET01[i].MGR1_1}', 
-                                    [JP1_1] = '${SET01[i].JP1_1}', 
-                                    [Revise1_2] = '${SET01[i].Revise1_2}', 
-                                    [Sublead1_2] = '${SET01[i].Sublead1_2}', 
-                                    [GL1_2] = '${SET01[i].GL1_2}', 
-                                    [MGR1_2] = '${SET01[i].MGR1_2}', 
-                                    [JP1_2] = '${SET01[i].JP1_2}', 
-                                    [Revise1_3] = '${SET01[i].Revise1_3}', 
-                                    [Sublead1_3] = '${SET01[i].Sublead1_3}', 
-                                    [GL1_3] = '${SET01[i].GL1_3}', 
-                                    [MGR1_3] = '${SET01[i].MGR1_3}', 
-                                    [JP1_3] = '${SET01[i].JP1_3}', 
-                                    [BDPrepare1] = '${SET01[i].BDPrepare1}', 
-                                    [BDTTC1] = '${SET01[i].BDTTC1}', 
-                                    [BDIssue1] = '${SET01[i].BDIssue1}', 
-                                    [BDSublead1] = '${SET01[i].BDSublead1}', 
-                                    [BDGL1] = '${SET01[i].BDGL1}', 
-                                    [BDMGR1] = '${SET01[i].BDMGR1}', 
-                                    [BDJP1] = '${SET01[i].BDJP1}', 
-                                    [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
-                                    [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
-                                    [BDGL1_1] = '${SET01[i].BDGL1_1}', 
-                                    [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
-                                    [BDJP1_1] = '${SET01[i].BDJP1_1}', 
-                                    [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
-                                    [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
-                                    [BDGL1_2] = '${SET01[i].BDGL1_2}', 
-                                    [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
-                                    [BDJP1_2] = '${SET01[i].BDJP1_2}', 
-                                    [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
-                                    [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
-                                    [BDGL1_3] = '${SET01[i].BDGL1_3}', 
-                                    [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
-                                    [BDJP1_3] = '${SET01[i].BDJP1_3}', 
-                                    [BDSent1] = '${SET01[i].BDSent1}', 
-                                    [Stage1] = '${SET01[i].Stage1}',
-                                    [Reason1] = '${SET01[i].Reason1}', 
-                                    [ReqNo2] = '${SET01[i].ReqNo2}', 
-                                    [Freq2] = '${SET01[i].Freq2}', 
-                                    [Evaluation2] = '${SET01[i].Evaluation2}', 
-                                    [PlanSam2] = '${SET01[i].PlanSam2}', 
-                                    [ActSam2] = '${SET01[i].ActSam2}', 
-                                    [RepDue2] = '${SET01[i].RepDue2}', 
-                                    [SentRep2] = '${SET01[i].SentRep2}', 
-                                    [RepDays2] = '${SET01[i].RepDays2}', 
-                                    [Request2] = '${SET01[i].Request2}', 
-                                    [TTCResult2] = '${SET01[i].TTCResult2}', 
-                                    [IssueDate2] = '${SET01[i].IssueDate2}', 
-                                    [Sublead2] = '${SET01[i].Sublead2}', 
-                                    [GL2] = '${SET01[i].GL2}', 
-                                    [MGR2] = '${SET01[i].MGR2}', 
-                                    [JP2] = '${SET01[i].JP2}', 
-                                    [Revise2_1] = '${SET01[i].Revise2_1}', 
-                                    [Sublead2_1] = '${SET01[i].Sublead2_1}', 
-                                    [GL2_1] = '${SET01[i].GL2_1}', 
-                                    [MGR2_1] = '${SET01[i].MGR2_1}', 
-                                    [JP2_1] = '${SET01[i].JP2_1}', 
-                                    [Revise2_2] = '${SET01[i].Revise2_2}', 
-                                    [Sublead2_2] = '${SET01[i].Sublead2_2}', 
-                                    [GL2_2] = '${SET01[i].GL2_2}', 
-                                    [MGR2_2] = '${SET01[i].MGR2_2}', 
-                                    [JP2_2] = '${SET01[i].JP2_2}', 
-                                    [Revise2_3] = '${SET01[i].Revise2_3}', 
-                                    [Sublead2_3] = '${SET01[i].Sublead2_3}', 
-                                    [GL2_3] = '${SET01[i].GL2_3}', 
-                                    [MGR2_3] = '${SET01[i].MGR2_3}', 
-                                    [JP2_3] = '${SET01[i].JP2_3}', 
-                                    [BDPrepare2] = '${SET01[i].BDPrepare2}', 
-                                    [BDTTC2] = '${SET01[i].BDTTC2}', 
-                                    [BDIssue2] = '${SET01[i].BDIssue2}', 
-                                    [BDSublead2] = '${SET01[i].BDSublead2}', 
-                                    [BDGL2] = '${SET01[i].BDGL2}', 
-                                    [BDMGR2] = '${SET01[i].BDMGR2}', 
-                                    [BDJP2] = '${SET01[i].BDJP2}', 
-                                    [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
-                                    [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
-                                    [BDGL2_1] = '${SET01[i].BDGL2_1}', 
-                                    [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
-                                    [BDJP2_1] = '${SET01[i].BDJP2_1}', 
-                                    [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
-                                    [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
-                                    [BDGL2_2] = '${SET01[i].BDGL2_2}', 
-                                    [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
-                                    [BDJP2_2] = '${SET01[i].BDJP2_2}', 
-                                    [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
-                                    [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
-                                    [BDGL2_3] = '${SET01[i].BDGL2_3}', 
-                                    [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
-                                    [BDJP2_3] = '${SET01[i].BDJP2_3}', 
-                                    [BDSent2] = '${SET01[i].BDSent2}', 
-                                    [Stage2] = '${SET01[i].Stage2}',
-                                    [Reason2] = '${SET01[i].Reason2}', 
-                                    [ReqNo3] = '${SET01[i].ReqNo3}', 
-                                    [Freq3] = '${SET01[i].Freq3}', 
-                                    [Evaluation3] = '${SET01[i].Evaluation3}', 
-                                    [PlanSam3] = '${SET01[i].PlanSam3}', 
-                                    [ActSam3] = '${SET01[i].ActSam3}', 
-                                    [RepDue3] = '${SET01[i].RepDue3}', 
-                                    [SentRep3] = '${SET01[i].SentRep3}', 
-                                    [RepDays3] = '${SET01[i].RepDays3}', 
-                                    [Request3] = '${SET01[i].Request3}', 
-                                    [TTCResult3] = '${SET01[i].TTCResult3}', 
-                                    [IssueDate3] = '${SET01[i].IssueDate3}', 
-                                    [Sublead3] = '${SET01[i].Sublead3}', 
-                                    [GL3] = '${SET01[i].GL3}', 
-                                    [MGR3] = '${SET01[i].MGR3}', 
-                                    [JP3] = '${SET01[i].JP3}', 
-                                    [Revise3_1] = '${SET01[i].Revise3_1}', 
-                                    [Sublead3_1] = '${SET01[i].Sublead3_1}', 
-                                    [GL3_1] = '${SET01[i].GL3_1}', 
-                                    [MGR3_1] = '${SET01[i].MGR3_1}', 
-                                    [JP3_1] = '${SET01[i].JP3_1}', 
-                                    [Revise3_2] = '${SET01[i].Revise3_2}', 
-                                    [Sublead3_2] = '${SET01[i].Sublead3_2}', 
-                                    [GL3_2] = '${SET01[i].GL3_2}', 
-                                    [MGR3_2] = '${SET01[i].MGR3_2}', 
-                                    [JP3_2] = '${SET01[i].JP3_2}', 
-                                    [Revise3_3] = '${SET01[i].Revise3_3}', 
-                                    [Sublead3_3] = '${SET01[i].Sublead3_3}', 
-                                    [GL3_3] = '${SET01[i].GL3_3}', 
-                                    [MGR3_3] = '${SET01[i].MGR3_3}', 
-                                    [JP3_3] = '${SET01[i].JP3_3}', 
-                                    [BDPrepare3] = '${SET01[i].BDPrepare3}', 
-                                    [BDTTC3] = '${SET01[i].BDTTC3}', 
-                                    [BDIssue3] = '${SET01[i].BDIssue3}', 
-                                    [BDSublead3] = '${SET01[i].BDSublead3}', 
-                                    [BDGL3] = '${SET01[i].BDGL3}', 
-                                    [BDMGR3] = '${SET01[i].BDMGR3}', 
-                                    [BDJP3] = '${SET01[i].BDJP3}', 
-                                    [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
-                                    [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
-                                    [BDGL3_1] = '${SET01[i].BDGL3_1}', 
-                                    [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
-                                    [BDJP3_1] = '${SET01[i].BDJP3_1}', 
-                                    [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
-                                    [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
-                                    [BDGL3_2] = '${SET01[i].BDGL3_2}', 
-                                    [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
-                                    [BDJP3_2] = '${SET01[i].BDJP3_2}', 
-                                    [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
-                                    [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
-                                    [BDGL3_3] = '${SET01[i].BDGL3_3}', 
-                                    [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
-                                    [BDJP3_3] = '${SET01[i].BDJP3_3}', 
-                                    [BDSent3] = '${SET01[i].BDSent3}', 
-                                    [Stage3] = '${SET01[i].Stage3}',
-                                    [Reason3] = '${SET01[i].Reason3}', 
-                                    [ReqNo4] = '${SET01[i].ReqNo4}', 
-                                    [Freq4] = '${SET01[i].Freq4}', 
-                                    [Evaluation4] = '${SET01[i].Evaluation4}', 
-                                    [PlanSam4] = '${SET01[i].PlanSam4}', 
-                                    [ActSam4] = '${SET01[i].ActSam4}', 
-                                    [RepDue4] = '${SET01[i].RepDue4}', 
-                                    [SentRep4] = '${SET01[i].SentRep4}', 
-                                    [RepDays4] = '${SET01[i].RepDays4}', 
-                                    [Request4] = '${SET01[i].Request4}', 
-                                    [TTCResult4] = '${SET01[i].TTCResult4}', 
-                                    [IssueDate4] = '${SET01[i].IssueDate4}', 
-                                    [Sublead4] = '${SET01[i].Sublead4}', 
-                                    [GL4] = '${SET01[i].GL4}', 
-                                    [MGR4] = '${SET01[i].MGR4}', 
-                                    [JP4] = '${SET01[i].JP4}', 
-                                    [Revise4_1] = '${SET01[i].Revise4_1}', 
-                                    [Sublead4_1] = '${SET01[i].Sublead4_1}', 
-                                    [GL4_1] = '${SET01[i].GL4_1}', 
-                                    [MGR4_1] = '${SET01[i].MGR4_1}', 
-                                    [JP4_1] = '${SET01[i].JP4_1}', 
-                                    [Revise4_2] = '${SET01[i].Revise4_2}', 
-                                    [Sublead4_2] = '${SET01[i].Sublead4_2}', 
-                                    [GL4_2] = '${SET01[i].GL4_2}', 
-                                    [MGR4_2] = '${SET01[i].MGR4_2}', 
-                                    [JP4_2] = '${SET01[i].JP4_2}', 
-                                    [Revise4_3] = '${SET01[i].Revise4_3}', 
-                                    [Sublead4_3] = '${SET01[i].Sublead4_3}', 
-                                    [GL4_3] = '${SET01[i].GL4_3}', 
-                                    [MGR4_3] = '${SET01[i].MGR4_3}', 
-                                    [JP4_3] = '${SET01[i].JP4_3}', 
-                                    [BDPrepare4] = '${SET01[i].BDPrepare4}', 
-                                    [BDTTC4] = '${SET01[i].BDTTC4}', 
-                                    [BDIssue4] = '${SET01[i].BDIssue4}', 
-                                    [BDSublead4] = '${SET01[i].BDSublead4}', 
-                                    [BDGL4] = '${SET01[i].BDGL4}', 
-                                    [BDMGR4] = '${SET01[i].BDMGR4}', 
-                                    [BDJP4] = '${SET01[i].BDJP4}', 
-                                    [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
-                                    [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
-                                    [BDGL4_1] = '${SET01[i].BDGL4_1}', 
-                                    [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
-                                    [BDJP4_1] = '${SET01[i].BDJP4_1}', 
-                                    [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
-                                    [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
-                                    [BDGL4_2] = '${SET01[i].BDGL4_2}', 
-                                    [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
-                                    [BDJP4_2] = '${SET01[i].BDJP4_2}', 
-                                    [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
-                                    [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
-                                    [BDGL4_3] = '${SET01[i].GL4_3}', 
-                                    [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
-                                    [BDJP4_3] = '${SET01[i].BDJP4_3}', 
-                                    [BDSent4] = '${SET01[i].BDSent4}',
-                                    [Stage4] = '${SET01[i].Stage4}', 
-                                    [Reason4] = '${SET01[i].Reason4}'
-                                    WHERE [CustShort] = '${SET01[i].CustShort}' 
-                                    AND [Month] = '${SET01[i].Month}' 
-                                    AND [Year] = '${SET01[i].Year}'
-                                    AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                                    AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                                    AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                                    AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
-                            await mssql.qurey(queryUpdate);
-                            // console.log(queryUpdate);
-                            // console.log("Update Complete " + i);
-                        } else {
-                            var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_ReportOverKPI] 
+                        // const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_ReportOverKPI]
+                        //     WHERE [CustShort] = '${SET01[i].CustShort}' 
+                        //     AND [Month] = '${SET01[i].Month}' 
+                        //     AND [Year] = '${SET01[i].Year}'`;
+                        // const result = await mssql.qurey(queryCheck);
+                        // if (result.recordset[0].count > 0) {
+                        //     const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_ReportOverKPI]
+                        //          SET [Type] = '${SET01[i].Type}', 
+                        //             [MKTGroup] = '${SET01[i].MKTGroup}', 
+                        //             [Group] = '${SET01[i].Group}', 
+                        //             [Customer] = '${SET01[i].Customer}', 
+                        //             [CustShort] = '${SET01[i].CustShort}', 
+                        //             [Frequency] = '${SET01[i].Frequency}', 
+                        //             [Incharge] = '${SET01[i].Incharge}', 
+                        //             [KPIServ] = '${SET01[i].KPIServ}', 
+                        //             [KPIPeriod] = '${SET01[i].KPIPeriod}', 
+                        //             [RepItems] = '${SET01[i].RepItems}', 
+                        //             [Month] = '${SET01[i].Month}', 
+                        //             [Year] = '${SET01[i].Year}', 
+                        //             [ReqNo1] = '${SET01[i].ReqNo1}', 
+                        //             [Freq1] = '${SET01[i].Freq1}', 
+                        //             [Evaluation1] = '${SET01[i].Evaluation1}', 
+                        //             [PlanSam1] = '${SET01[i].PlanSam1}', 
+                        //             [ActSam1] = '${SET01[i].ActSam1}', 
+                        //             [RepDue1] = '${SET01[i].RepDue1}', 
+                        //             [SentRep1] = '${SET01[i].SentRep1}', 
+                        //             [RepDays1] = '${SET01[i].RepDays1}', 
+                        //             [Request1] = '${SET01[i].Request1}', 
+                        //             [TTCResult1] = '${SET01[i].TTCResult1}', 
+                        //             [IssueDate1] = '${SET01[i].IssueDate1}', 
+                        //             [Sublead1] = '${SET01[i].Sublead1}', 
+                        //             [GL1] = '${SET01[i].GL1}', 
+                        //             [MGR1] = '${SET01[i].MGR1}', 
+                        //             [JP1] = '${SET01[i].JP1}', 
+                        //             [Revise1_1] = '${SET01[i].Revise1_1}', 
+                        //             [Sublead1_1] = '${SET01[i].Sublead1_1}', 
+                        //             [GL1_1] = '${SET01[i].GL1_1}', 
+                        //             [MGR1_1] = '${SET01[i].MGR1_1}', 
+                        //             [JP1_1] = '${SET01[i].JP1_1}', 
+                        //             [Revise1_2] = '${SET01[i].Revise1_2}', 
+                        //             [Sublead1_2] = '${SET01[i].Sublead1_2}', 
+                        //             [GL1_2] = '${SET01[i].GL1_2}', 
+                        //             [MGR1_2] = '${SET01[i].MGR1_2}', 
+                        //             [JP1_2] = '${SET01[i].JP1_2}', 
+                        //             [Revise1_3] = '${SET01[i].Revise1_3}', 
+                        //             [Sublead1_3] = '${SET01[i].Sublead1_3}', 
+                        //             [GL1_3] = '${SET01[i].GL1_3}', 
+                        //             [MGR1_3] = '${SET01[i].MGR1_3}', 
+                        //             [JP1_3] = '${SET01[i].JP1_3}', 
+                        //             [BDPrepare1] = '${SET01[i].BDPrepare1}', 
+                        //             [BDTTC1] = '${SET01[i].BDTTC1}', 
+                        //             [BDIssue1] = '${SET01[i].BDIssue1}', 
+                        //             [BDSublead1] = '${SET01[i].BDSublead1}', 
+                        //             [BDGL1] = '${SET01[i].BDGL1}', 
+                        //             [BDMGR1] = '${SET01[i].BDMGR1}', 
+                        //             [BDJP1] = '${SET01[i].BDJP1}', 
+                        //             [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
+                        //             [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
+                        //             [BDGL1_1] = '${SET01[i].BDGL1_1}', 
+                        //             [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
+                        //             [BDJP1_1] = '${SET01[i].BDJP1_1}', 
+                        //             [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
+                        //             [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
+                        //             [BDGL1_2] = '${SET01[i].BDGL1_2}', 
+                        //             [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
+                        //             [BDJP1_2] = '${SET01[i].BDJP1_2}', 
+                        //             [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
+                        //             [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
+                        //             [BDGL1_3] = '${SET01[i].BDGL1_3}', 
+                        //             [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
+                        //             [BDJP1_3] = '${SET01[i].BDJP1_3}', 
+                        //             [BDSent1] = '${SET01[i].BDSent1}', 
+                        //             [Stage1] = '${SET01[i].Stage1}',
+                        //             [Reason1] = '${SET01[i].Reason1}', 
+                        //             [ReqNo2] = '${SET01[i].ReqNo2}', 
+                        //             [Freq2] = '${SET01[i].Freq2}', 
+                        //             [Evaluation2] = '${SET01[i].Evaluation2}', 
+                        //             [PlanSam2] = '${SET01[i].PlanSam2}', 
+                        //             [ActSam2] = '${SET01[i].ActSam2}', 
+                        //             [RepDue2] = '${SET01[i].RepDue2}', 
+                        //             [SentRep2] = '${SET01[i].SentRep2}', 
+                        //             [RepDays2] = '${SET01[i].RepDays2}', 
+                        //             [Request2] = '${SET01[i].Request2}', 
+                        //             [TTCResult2] = '${SET01[i].TTCResult2}', 
+                        //             [IssueDate2] = '${SET01[i].IssueDate2}', 
+                        //             [Sublead2] = '${SET01[i].Sublead2}', 
+                        //             [GL2] = '${SET01[i].GL2}', 
+                        //             [MGR2] = '${SET01[i].MGR2}', 
+                        //             [JP2] = '${SET01[i].JP2}', 
+                        //             [Revise2_1] = '${SET01[i].Revise2_1}', 
+                        //             [Sublead2_1] = '${SET01[i].Sublead2_1}', 
+                        //             [GL2_1] = '${SET01[i].GL2_1}', 
+                        //             [MGR2_1] = '${SET01[i].MGR2_1}', 
+                        //             [JP2_1] = '${SET01[i].JP2_1}', 
+                        //             [Revise2_2] = '${SET01[i].Revise2_2}', 
+                        //             [Sublead2_2] = '${SET01[i].Sublead2_2}', 
+                        //             [GL2_2] = '${SET01[i].GL2_2}', 
+                        //             [MGR2_2] = '${SET01[i].MGR2_2}', 
+                        //             [JP2_2] = '${SET01[i].JP2_2}', 
+                        //             [Revise2_3] = '${SET01[i].Revise2_3}', 
+                        //             [Sublead2_3] = '${SET01[i].Sublead2_3}', 
+                        //             [GL2_3] = '${SET01[i].GL2_3}', 
+                        //             [MGR2_3] = '${SET01[i].MGR2_3}', 
+                        //             [JP2_3] = '${SET01[i].JP2_3}', 
+                        //             [BDPrepare2] = '${SET01[i].BDPrepare2}', 
+                        //             [BDTTC2] = '${SET01[i].BDTTC2}', 
+                        //             [BDIssue2] = '${SET01[i].BDIssue2}', 
+                        //             [BDSublead2] = '${SET01[i].BDSublead2}', 
+                        //             [BDGL2] = '${SET01[i].BDGL2}', 
+                        //             [BDMGR2] = '${SET01[i].BDMGR2}', 
+                        //             [BDJP2] = '${SET01[i].BDJP2}', 
+                        //             [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
+                        //             [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
+                        //             [BDGL2_1] = '${SET01[i].BDGL2_1}', 
+                        //             [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
+                        //             [BDJP2_1] = '${SET01[i].BDJP2_1}', 
+                        //             [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
+                        //             [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
+                        //             [BDGL2_2] = '${SET01[i].BDGL2_2}', 
+                        //             [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
+                        //             [BDJP2_2] = '${SET01[i].BDJP2_2}', 
+                        //             [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
+                        //             [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
+                        //             [BDGL2_3] = '${SET01[i].BDGL2_3}', 
+                        //             [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
+                        //             [BDJP2_3] = '${SET01[i].BDJP2_3}', 
+                        //             [BDSent2] = '${SET01[i].BDSent2}', 
+                        //             [Stage2] = '${SET01[i].Stage2}',
+                        //             [Reason2] = '${SET01[i].Reason2}', 
+                        //             [ReqNo3] = '${SET01[i].ReqNo3}', 
+                        //             [Freq3] = '${SET01[i].Freq3}', 
+                        //             [Evaluation3] = '${SET01[i].Evaluation3}', 
+                        //             [PlanSam3] = '${SET01[i].PlanSam3}', 
+                        //             [ActSam3] = '${SET01[i].ActSam3}', 
+                        //             [RepDue3] = '${SET01[i].RepDue3}', 
+                        //             [SentRep3] = '${SET01[i].SentRep3}', 
+                        //             [RepDays3] = '${SET01[i].RepDays3}', 
+                        //             [Request3] = '${SET01[i].Request3}', 
+                        //             [TTCResult3] = '${SET01[i].TTCResult3}', 
+                        //             [IssueDate3] = '${SET01[i].IssueDate3}', 
+                        //             [Sublead3] = '${SET01[i].Sublead3}', 
+                        //             [GL3] = '${SET01[i].GL3}', 
+                        //             [MGR3] = '${SET01[i].MGR3}', 
+                        //             [JP3] = '${SET01[i].JP3}', 
+                        //             [Revise3_1] = '${SET01[i].Revise3_1}', 
+                        //             [Sublead3_1] = '${SET01[i].Sublead3_1}', 
+                        //             [GL3_1] = '${SET01[i].GL3_1}', 
+                        //             [MGR3_1] = '${SET01[i].MGR3_1}', 
+                        //             [JP3_1] = '${SET01[i].JP3_1}', 
+                        //             [Revise3_2] = '${SET01[i].Revise3_2}', 
+                        //             [Sublead3_2] = '${SET01[i].Sublead3_2}', 
+                        //             [GL3_2] = '${SET01[i].GL3_2}', 
+                        //             [MGR3_2] = '${SET01[i].MGR3_2}', 
+                        //             [JP3_2] = '${SET01[i].JP3_2}', 
+                        //             [Revise3_3] = '${SET01[i].Revise3_3}', 
+                        //             [Sublead3_3] = '${SET01[i].Sublead3_3}', 
+                        //             [GL3_3] = '${SET01[i].GL3_3}', 
+                        //             [MGR3_3] = '${SET01[i].MGR3_3}', 
+                        //             [JP3_3] = '${SET01[i].JP3_3}', 
+                        //             [BDPrepare3] = '${SET01[i].BDPrepare3}', 
+                        //             [BDTTC3] = '${SET01[i].BDTTC3}', 
+                        //             [BDIssue3] = '${SET01[i].BDIssue3}', 
+                        //             [BDSublead3] = '${SET01[i].BDSublead3}', 
+                        //             [BDGL3] = '${SET01[i].BDGL3}', 
+                        //             [BDMGR3] = '${SET01[i].BDMGR3}', 
+                        //             [BDJP3] = '${SET01[i].BDJP3}', 
+                        //             [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
+                        //             [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
+                        //             [BDGL3_1] = '${SET01[i].BDGL3_1}', 
+                        //             [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
+                        //             [BDJP3_1] = '${SET01[i].BDJP3_1}', 
+                        //             [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
+                        //             [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
+                        //             [BDGL3_2] = '${SET01[i].BDGL3_2}', 
+                        //             [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
+                        //             [BDJP3_2] = '${SET01[i].BDJP3_2}', 
+                        //             [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
+                        //             [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
+                        //             [BDGL3_3] = '${SET01[i].BDGL3_3}', 
+                        //             [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
+                        //             [BDJP3_3] = '${SET01[i].BDJP3_3}', 
+                        //             [BDSent3] = '${SET01[i].BDSent3}', 
+                        //             [Stage3] = '${SET01[i].Stage3}',
+                        //             [Reason3] = '${SET01[i].Reason3}', 
+                        //             [ReqNo4] = '${SET01[i].ReqNo4}', 
+                        //             [Freq4] = '${SET01[i].Freq4}', 
+                        //             [Evaluation4] = '${SET01[i].Evaluation4}', 
+                        //             [PlanSam4] = '${SET01[i].PlanSam4}', 
+                        //             [ActSam4] = '${SET01[i].ActSam4}', 
+                        //             [RepDue4] = '${SET01[i].RepDue4}', 
+                        //             [SentRep4] = '${SET01[i].SentRep4}', 
+                        //             [RepDays4] = '${SET01[i].RepDays4}', 
+                        //             [Request4] = '${SET01[i].Request4}', 
+                        //             [TTCResult4] = '${SET01[i].TTCResult4}', 
+                        //             [IssueDate4] = '${SET01[i].IssueDate4}', 
+                        //             [Sublead4] = '${SET01[i].Sublead4}', 
+                        //             [GL4] = '${SET01[i].GL4}', 
+                        //             [MGR4] = '${SET01[i].MGR4}', 
+                        //             [JP4] = '${SET01[i].JP4}', 
+                        //             [Revise4_1] = '${SET01[i].Revise4_1}', 
+                        //             [Sublead4_1] = '${SET01[i].Sublead4_1}', 
+                        //             [GL4_1] = '${SET01[i].GL4_1}', 
+                        //             [MGR4_1] = '${SET01[i].MGR4_1}', 
+                        //             [JP4_1] = '${SET01[i].JP4_1}', 
+                        //             [Revise4_2] = '${SET01[i].Revise4_2}', 
+                        //             [Sublead4_2] = '${SET01[i].Sublead4_2}', 
+                        //             [GL4_2] = '${SET01[i].GL4_2}', 
+                        //             [MGR4_2] = '${SET01[i].MGR4_2}', 
+                        //             [JP4_2] = '${SET01[i].JP4_2}', 
+                        //             [Revise4_3] = '${SET01[i].Revise4_3}', 
+                        //             [Sublead4_3] = '${SET01[i].Sublead4_3}', 
+                        //             [GL4_3] = '${SET01[i].GL4_3}', 
+                        //             [MGR4_3] = '${SET01[i].MGR4_3}', 
+                        //             [JP4_3] = '${SET01[i].JP4_3}', 
+                        //             [BDPrepare4] = '${SET01[i].BDPrepare4}', 
+                        //             [BDTTC4] = '${SET01[i].BDTTC4}', 
+                        //             [BDIssue4] = '${SET01[i].BDIssue4}', 
+                        //             [BDSublead4] = '${SET01[i].BDSublead4}', 
+                        //             [BDGL4] = '${SET01[i].BDGL4}', 
+                        //             [BDMGR4] = '${SET01[i].BDMGR4}', 
+                        //             [BDJP4] = '${SET01[i].BDJP4}', 
+                        //             [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
+                        //             [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
+                        //             [BDGL4_1] = '${SET01[i].BDGL4_1}', 
+                        //             [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
+                        //             [BDJP4_1] = '${SET01[i].BDJP4_1}', 
+                        //             [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
+                        //             [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
+                        //             [BDGL4_2] = '${SET01[i].BDGL4_2}', 
+                        //             [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
+                        //             [BDJP4_2] = '${SET01[i].BDJP4_2}', 
+                        //             [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
+                        //             [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
+                        //             [BDGL4_3] = '${SET01[i].GL4_3}', 
+                        //             [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
+                        //             [BDJP4_3] = '${SET01[i].BDJP4_3}', 
+                        //             [BDSent4] = '${SET01[i].BDSent4}',
+                        //             [Stage4] = '${SET01[i].Stage4}', 
+                        //             [Reason4] = '${SET01[i].Reason4}'
+                        //             WHERE [CustShort] = '${SET01[i].CustShort}' 
+                        //             AND [Month] = '${SET01[i].Month}' 
+                        //             AND [Year] = '${SET01[i].Year}'
+                        //             AND [ReqNo1] = '${SET01[i].ReqNo1}'
+                        //             AND [ReqNo2] = '${SET01[i].ReqNo2}'
+                        //             AND [ReqNo3] = '${SET01[i].ReqNo3}'
+                        //             AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
+                        //     await mssql.qurey(queryUpdate);
+                        //     // console.log(queryUpdate);
+                        //     // console.log("Update Complete " + i);
+                        // } else {
+                        var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_ReportOverKPI] 
                         ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [Request1], [TTCResult1], 
                         [IssueDate1], [Sublead1], [GL1], [MGR1], [JP1], [Revise1_1], [Sublead1_1], [GL1_1], [MGR1_1], [JP1_1], [Revise1_2], [Sublead1_2], [GL1_2], [MGR1_2], [JP1_2], [Revise1_3], [Sublead1_3], [GL1_3], [MGR1_3], [JP1_3], [BDPrepare1], [BDTTC1], [BDIssue1], [BDSublead1], [BDGL1], 
                         [BDMGR1], [BDJP1], [BDRevise1_1], [BDSublead1_1], [BDGL1_1], [BDMGR1_1], [BDJP1_1], [BDRevise1_2], [BDSublead1_2], [BDGL1_2], [BDMGR1_2], [BDJP1_2], [BDRevise1_3], [BDSublead1_3], [BDGL1_3], [BDMGR1_3], [BDJP1_3], [BDSent1], [Stage1], [Reason1], [ReqNo2], 
@@ -4167,10 +4176,10 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                         [BDSublead4_3], [BDGL4_3], [BDMGR4_3], [BDJP4_3], [BDSent4], [Stage4], [Reason4]) 
                         values `;
 
-                            for (i = 0; i < SET01.length; i++) {
-                                queryInsert =
-                                    queryInsert +
-                                    `( '${SET01[i].Type}'
+                        for (i = 0; i < SET01.length; i++) {
+                            queryInsert =
+                                queryInsert +
+                                `( '${SET01[i].Type}'
                                 ,'${SET01[i].MKTGroup}'
                                 ,'${SET01[i].Group}'
                                 ,'${SET01[i].Customer}'
@@ -4403,16 +4412,16 @@ router.post('/02SARKPI/ReportOverKPIChart', async (req, res) => {
                                 ,'${SET01[i].Stage4}'
                                 ,'${SET01[i].Reason4}'
                             )`;
-                                if (i !== SET01.length - 1) {
-                                    queryInsert = queryInsert + ",";
-                                }
+                            if (i !== SET01.length - 1) {
+                                queryInsert = queryInsert + ",";
                             }
-                            query = queryInsert + ";";
-                            // query = queryDelete + queryInsert + ";";
-                            await mssql.qurey(query);
-                            // console.log(query);
-                            // console.log("Insert Complete " + i);
                         }
+                        query = queryInsert + ";";
+                        // query = queryDelete + queryInsert + ";";
+                        await mssql.qurey(query);
+                        // console.log(query);
+                        // console.log("Insert Complete " + i);
+                        // }
                     }
                 } catch (err) {
                     console.error('Error executing SQL query:', err.message);
@@ -4439,9 +4448,11 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
 
     await loadHolidays();
     if (input['YEAR'] != undefined) {
-        const type = input['TYPE'];
         const year = input['YEAR'];
         const lastYear = year - 1;
+        const queryDelete = `DELETE FROM [SARKPI].[dbo].[KPI_AchievedCust] WHERE Year IN (${year}, ${lastYear})`;
+        await mssql.qurey(queryDelete);
+        const type = input['TYPE'];
 
         const queryRequestLab = `
             SELECT * FROM [SAR].[dbo].[Routine_RequestLab]
@@ -4839,262 +4850,262 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
         console.log("SET01 " + SET01.length);
         try {
             for (let i = 0; i < SET01.length; i++) {
-                const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_AchievedCust]
-                        WHERE [CustShort] = '${SET01[i].CustShort}' 
-                        AND [Month] = '${SET01[i].Month}' 
-                        AND [Year] = '${SET01[i].Year}'
-                        AND ([ReqNo1] = '${SET01[i].ReqNo1}'
-                        OR [ReqNo2] = '${SET01[i].ReqNo2}'
-                        OR [ReqNo3] = '${SET01[i].ReqNo3}'
-                        OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
-                const result = await mssql.qurey(queryCheck);
-                // console.log('queryCheck:' + queryCheck);
-                if (result.recordset[0].count > 0) {
-                    const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_AchievedCust]
-                            SET [Type] = '${SET01[i].Type}', 
-                                [MKTGroup] = '${SET01[i].MKTGroup}', 
-                                [Group] = '${SET01[i].Group}', 
-                                [Customer] = '${SET01[i].Customer}', 
-                                [CustShort] = '${SET01[i].CustShort}', 
-                                [Frequency] = '${SET01[i].Frequency}', 
-                                [Incharge] = '${SET01[i].Incharge}', 
-                                [KPIServ] = '${SET01[i].KPIServ}', 
-                                [KPIPeriod] = '${SET01[i].KPIPeriod}', 
-                                [RepItems] = '${SET01[i].RepItems}', 
-                                [Month] = '${SET01[i].Month}', 
-                                [Year] = '${SET01[i].Year}', 
-                                [ReqNo1] = '${SET01[i].ReqNo1}', 
-                                [Freq1] = '${SET01[i].Freq1}', 
-                                [Evaluation1] = '${SET01[i].Evaluation1}', 
-                                [PlanSam1] = '${SET01[i].PlanSam1}', 
-                                [ActSam1] = '${SET01[i].ActSam1}', 
-                                [RepDue1] = '${SET01[i].RepDue1}', 
-                                [SentRep1] = '${SET01[i].SentRep1}', 
-                                [RepDays1] = '${SET01[i].RepDays1}', 
-                                [Request1] = '${SET01[i].Request1}', 
-                                [TTCResult1] = '${SET01[i].TTCResult1}', 
-                                [IssueDate1] = '${SET01[i].IssueDate1}', 
-                                [Sublead1] = '${SET01[i].Sublead1}', 
-                                [GL1] = '${SET01[i].GL1}', 
-                                [MGR1] = '${SET01[i].MGR1}', 
-                                [JP1] = '${SET01[i].JP1}', 
-                                [Revise1_1] = '${SET01[i].Revise1_1}', 
-                                [Sublead1_1] = '${SET01[i].Sublead1_1}', 
-                                [GL1_1] = '${SET01[i].GL1_1}', 
-                                [MGR1_1] = '${SET01[i].MGR1_1}', 
-                                [JP1_1] = '${SET01[i].JP1_1}', 
-                                [Revise1_2] = '${SET01[i].Revise1_2}', 
-                                [Sublead1_2] = '${SET01[i].Sublead1_2}', 
-                                [GL1_2] = '${SET01[i].GL1_2}', 
-                                [MGR1_2] = '${SET01[i].MGR1_2}', 
-                                [JP1_2] = '${SET01[i].JP1_2}', 
-                                [Revise1_3] = '${SET01[i].Revise1_3}', 
-                                [Sublead1_3] = '${SET01[i].Sublead1_3}', 
-                                [GL1_3] = '${SET01[i].GL1_3}', 
-                                [MGR1_3] = '${SET01[i].MGR1_3}', 
-                                [JP1_3] = '${SET01[i].JP1_3}', 
-                                [BDPrepare1] = '${SET01[i].BDPrepare1}', 
-                                [BDTTC1] = '${SET01[i].BDTTC1}', 
-                                [BDIssue1] = '${SET01[i].BDIssue1}', 
-                                [BDSublead1] = '${SET01[i].BDSublead1}', 
-                                [BDGL1] = '${SET01[i].BDGL1}', 
-                                [BDMGR1] = '${SET01[i].BDMGR1}', 
-                                [BDJP1] = '${SET01[i].BDJP1}', 
-                                [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
-                                [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
-                                [BDGL1_1] = '${SET01[i].BDGL1_1}', 
-                                [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
-                                [BDJP1_1] = '${SET01[i].BDJP1_1}', 
-                                [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
-                                [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
-                                [BDGL1_2] = '${SET01[i].BDGL1_2}', 
-                                [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
-                                [BDJP1_2] = '${SET01[i].BDJP1_2}', 
-                                [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
-                                [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
-                                [BDGL1_3] = '${SET01[i].BDGL1_3}', 
-                                [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
-                                [BDJP1_3] = '${SET01[i].BDJP1_3}', 
-                                [BDSent1] = '${SET01[i].BDSent1}', 
-                                [Stage1] = '${SET01[i].Stage1}',
-                                [Reason1] = '${SET01[i].Reason1}', 
-                                [ReqNo2] = '${SET01[i].ReqNo2}', 
-                                [Freq2] = '${SET01[i].Freq2}', 
-                                [Evaluation2] = '${SET01[i].Evaluation2}', 
-                                [PlanSam2] = '${SET01[i].PlanSam2}', 
-                                [ActSam2] = '${SET01[i].ActSam2}', 
-                                [RepDue2] = '${SET01[i].RepDue2}', 
-                                [SentRep2] = '${SET01[i].SentRep2}', 
-                                [RepDays2] = '${SET01[i].RepDays2}', 
-                                [Request2] = '${SET01[i].Request2}', 
-                                [TTCResult2] = '${SET01[i].TTCResult2}', 
-                                [IssueDate2] = '${SET01[i].IssueDate2}', 
-                                [Sublead2] = '${SET01[i].Sublead2}', 
-                                [GL2] = '${SET01[i].GL2}', 
-                                [MGR2] = '${SET01[i].MGR2}', 
-                                [JP2] = '${SET01[i].JP2}', 
-                                [Revise2_1] = '${SET01[i].Revise2_1}', 
-                                [Sublead2_1] = '${SET01[i].Sublead2_1}', 
-                                [GL2_1] = '${SET01[i].GL2_1}', 
-                                [MGR2_1] = '${SET01[i].MGR2_1}', 
-                                [JP2_1] = '${SET01[i].JP2_1}', 
-                                [Revise2_2] = '${SET01[i].Revise2_2}', 
-                                [Sublead2_2] = '${SET01[i].Sublead2_2}', 
-                                [GL2_2] = '${SET01[i].GL2_2}', 
-                                [MGR2_2] = '${SET01[i].MGR2_2}', 
-                                [JP2_2] = '${SET01[i].JP2_2}', 
-                                [Revise2_3] = '${SET01[i].Revise2_3}', 
-                                [Sublead2_3] = '${SET01[i].Sublead2_3}', 
-                                [GL2_3] = '${SET01[i].GL2_3}', 
-                                [MGR2_3] = '${SET01[i].MGR2_3}', 
-                                [JP2_3] = '${SET01[i].JP2_3}', 
-                                [BDPrepare2] = '${SET01[i].BDPrepare2}', 
-                                [BDTTC2] = '${SET01[i].BDTTC2}', 
-                                [BDIssue2] = '${SET01[i].BDIssue2}', 
-                                [BDSublead2] = '${SET01[i].BDSublead2}', 
-                                [BDGL2] = '${SET01[i].BDGL2}', 
-                                [BDMGR2] = '${SET01[i].BDMGR2}', 
-                                [BDJP2] = '${SET01[i].BDJP2}', 
-                                [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
-                                [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
-                                [BDGL2_1] = '${SET01[i].BDGL2_1}', 
-                                [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
-                                [BDJP2_1] = '${SET01[i].BDJP2_1}', 
-                                [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
-                                [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
-                                [BDGL2_2] = '${SET01[i].BDGL2_2}', 
-                                [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
-                                [BDJP2_2] = '${SET01[i].BDJP2_2}', 
-                                [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
-                                [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
-                                [BDGL2_3] = '${SET01[i].BDGL2_3}', 
-                                [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
-                                [BDJP2_3] = '${SET01[i].BDJP2_3}', 
-                                [BDSent2] = '${SET01[i].BDSent2}', 
-                                [Stage2] = '${SET01[i].Stage2}',
-                                [Reason2] = '${SET01[i].Reason2}', 
-                                [ReqNo3] = '${SET01[i].ReqNo3}', 
-                                [Freq3] = '${SET01[i].Freq3}', 
-                                [Evaluation3] = '${SET01[i].Evaluation3}', 
-                                [PlanSam3] = '${SET01[i].PlanSam3}', 
-                                [ActSam3] = '${SET01[i].ActSam3}', 
-                                [RepDue3] = '${SET01[i].RepDue3}', 
-                                [SentRep3] = '${SET01[i].SentRep3}', 
-                                [RepDays3] = '${SET01[i].RepDays3}', 
-                                [Request3] = '${SET01[i].Request3}', 
-                                [TTCResult3] = '${SET01[i].TTCResult3}', 
-                                [IssueDate3] = '${SET01[i].IssueDate3}', 
-                                [Sublead3] = '${SET01[i].Sublead3}', 
-                                [GL3] = '${SET01[i].GL3}', 
-                                [MGR3] = '${SET01[i].MGR3}', 
-                                [JP3] = '${SET01[i].JP3}', 
-                                [Revise3_1] = '${SET01[i].Revise3_1}', 
-                                [Sublead3_1] = '${SET01[i].Sublead3_1}', 
-                                [GL3_1] = '${SET01[i].GL3_1}', 
-                                [MGR3_1] = '${SET01[i].MGR3_1}', 
-                                [JP3_1] = '${SET01[i].JP3_1}', 
-                                [Revise3_2] = '${SET01[i].Revise3_2}', 
-                                [Sublead3_2] = '${SET01[i].Sublead3_2}', 
-                                [GL3_2] = '${SET01[i].GL3_2}', 
-                                [MGR3_2] = '${SET01[i].MGR3_2}', 
-                                [JP3_2] = '${SET01[i].JP3_2}', 
-                                [Revise3_3] = '${SET01[i].Revise3_3}', 
-                                [Sublead3_3] = '${SET01[i].Sublead3_3}', 
-                                [GL3_3] = '${SET01[i].GL3_3}', 
-                                [MGR3_3] = '${SET01[i].MGR3_3}', 
-                                [JP3_3] = '${SET01[i].JP3_3}', 
-                                [BDPrepare3] = '${SET01[i].BDPrepare3}', 
-                                [BDTTC3] = '${SET01[i].BDTTC3}', 
-                                [BDIssue3] = '${SET01[i].BDIssue3}', 
-                                [BDSublead3] = '${SET01[i].BDSublead3}', 
-                                [BDGL3] = '${SET01[i].BDGL3}', 
-                                [BDMGR3] = '${SET01[i].BDMGR3}', 
-                                [BDJP3] = '${SET01[i].BDJP3}', 
-                                [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
-                                [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
-                                [BDGL3_1] = '${SET01[i].BDGL3_1}', 
-                                [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
-                                [BDJP3_1] = '${SET01[i].BDJP3_1}', 
-                                [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
-                                [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
-                                [BDGL3_2] = '${SET01[i].BDGL3_2}', 
-                                [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
-                                [BDJP3_2] = '${SET01[i].BDJP3_2}', 
-                                [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
-                                [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
-                                [BDGL3_3] = '${SET01[i].BDGL3_3}', 
-                                [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
-                                [BDJP3_3] = '${SET01[i].BDJP3_3}', 
-                                [BDSent3] = '${SET01[i].BDSent3}', 
-                                [Stage3] = '${SET01[i].Stage3}',
-                                [Reason3] = '${SET01[i].Reason3}', 
-                                [ReqNo4] = '${SET01[i].ReqNo4}', 
-                                [Freq4] = '${SET01[i].Freq4}', 
-                                [Evaluation4] = '${SET01[i].Evaluation4}', 
-                                [PlanSam4] = '${SET01[i].PlanSam4}', 
-                                [ActSam4] = '${SET01[i].ActSam4}', 
-                                [RepDue4] = '${SET01[i].RepDue4}', 
-                                [SentRep4] = '${SET01[i].SentRep4}', 
-                                [RepDays4] = '${SET01[i].RepDays4}', 
-                                [Request4] = '${SET01[i].Request4}', 
-                                [TTCResult4] = '${SET01[i].TTCResult4}', 
-                                [IssueDate4] = '${SET01[i].IssueDate4}', 
-                                [Sublead4] = '${SET01[i].Sublead4}', 
-                                [GL4] = '${SET01[i].GL4}', 
-                                [MGR4] = '${SET01[i].MGR4}', 
-                                [JP4] = '${SET01[i].JP4}', 
-                                [Revise4_1] = '${SET01[i].Revise4_1}', 
-                                [Sublead4_1] = '${SET01[i].Sublead4_1}', 
-                                [GL4_1] = '${SET01[i].GL4_1}', 
-                                [MGR4_1] = '${SET01[i].MGR4_1}', 
-                                [JP4_1] = '${SET01[i].JP4_1}', 
-                                [Revise4_2] = '${SET01[i].Revise4_2}', 
-                                [Sublead4_2] = '${SET01[i].Sublead4_2}', 
-                                [GL4_2] = '${SET01[i].GL4_2}', 
-                                [MGR4_2] = '${SET01[i].MGR4_2}', 
-                                [JP4_2] = '${SET01[i].JP4_2}', 
-                                [Revise4_3] = '${SET01[i].Revise4_3}', 
-                                [Sublead4_3] = '${SET01[i].Sublead4_3}', 
-                                [GL4_3] = '${SET01[i].GL4_3}', 
-                                [MGR4_3] = '${SET01[i].MGR4_3}', 
-                                [JP4_3] = '${SET01[i].JP4_3}', 
-                                [BDPrepare4] = '${SET01[i].BDPrepare4}', 
-                                [BDTTC4] = '${SET01[i].BDTTC4}', 
-                                [BDIssue4] = '${SET01[i].BDIssue4}', 
-                                [BDSublead4] = '${SET01[i].BDSublead4}', 
-                                [BDGL4] = '${SET01[i].BDGL4}', 
-                                [BDMGR4] = '${SET01[i].BDMGR4}', 
-                                [BDJP4] = '${SET01[i].BDJP4}', 
-                                [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
-                                [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
-                                [BDGL4_1] = '${SET01[i].BDGL4_1}', 
-                                [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
-                                [BDJP4_1] = '${SET01[i].BDJP4_1}', 
-                                [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
-                                [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
-                                [BDGL4_2] = '${SET01[i].BDGL4_2}', 
-                                [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
-                                [BDJP4_2] = '${SET01[i].BDJP4_2}', 
-                                [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
-                                [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
-                                [BDGL4_3] = '${SET01[i].GL4_3}', 
-                                [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
-                                [BDJP4_3] = '${SET01[i].BDJP4_3}', 
-                                [BDSent4] = '${SET01[i].BDSent4}',
-                                [Stage4] = '${SET01[i].Stage4}', 
-                                [Reason4] = '${SET01[i].Reason4}'
-                                WHERE [CustShort] = '${SET01[i].CustShort}' 
-                                AND [Month] = '${SET01[i].Month}' 
-                                AND [Year] = '${SET01[i].Year}'
-                                AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                                AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                                AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                                AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
-                    await mssql.qurey(queryUpdate);
-                    // console.log('queryUpdate:' + queryUpdate);
-                    // console.log("Update Complete " + i);
-                } else {
-                    var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_AchievedCust] 
+                // const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_AchievedCust]
+                //         WHERE [CustShort] = '${SET01[i].CustShort}' 
+                //         AND [Month] = '${SET01[i].Month}' 
+                //         AND [Year] = '${SET01[i].Year}'
+                //         AND ([ReqNo1] = '${SET01[i].ReqNo1}'
+                //         OR [ReqNo2] = '${SET01[i].ReqNo2}'
+                //         OR [ReqNo3] = '${SET01[i].ReqNo3}'
+                //         OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
+                // const result = await mssql.qurey(queryCheck);
+                // // console.log('queryCheck:' + queryCheck);
+                // if (result.recordset[0].count > 0) {
+                //     const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_AchievedCust]
+                //             SET [Type] = '${SET01[i].Type}', 
+                //                 [MKTGroup] = '${SET01[i].MKTGroup}', 
+                //                 [Group] = '${SET01[i].Group}', 
+                //                 [Customer] = '${SET01[i].Customer}', 
+                //                 [CustShort] = '${SET01[i].CustShort}', 
+                //                 [Frequency] = '${SET01[i].Frequency}', 
+                //                 [Incharge] = '${SET01[i].Incharge}', 
+                //                 [KPIServ] = '${SET01[i].KPIServ}', 
+                //                 [KPIPeriod] = '${SET01[i].KPIPeriod}', 
+                //                 [RepItems] = '${SET01[i].RepItems}', 
+                //                 [Month] = '${SET01[i].Month}', 
+                //                 [Year] = '${SET01[i].Year}', 
+                //                 [ReqNo1] = '${SET01[i].ReqNo1}', 
+                //                 [Freq1] = '${SET01[i].Freq1}', 
+                //                 [Evaluation1] = '${SET01[i].Evaluation1}', 
+                //                 [PlanSam1] = '${SET01[i].PlanSam1}', 
+                //                 [ActSam1] = '${SET01[i].ActSam1}', 
+                //                 [RepDue1] = '${SET01[i].RepDue1}', 
+                //                 [SentRep1] = '${SET01[i].SentRep1}', 
+                //                 [RepDays1] = '${SET01[i].RepDays1}', 
+                //                 [Request1] = '${SET01[i].Request1}', 
+                //                 [TTCResult1] = '${SET01[i].TTCResult1}', 
+                //                 [IssueDate1] = '${SET01[i].IssueDate1}', 
+                //                 [Sublead1] = '${SET01[i].Sublead1}', 
+                //                 [GL1] = '${SET01[i].GL1}', 
+                //                 [MGR1] = '${SET01[i].MGR1}', 
+                //                 [JP1] = '${SET01[i].JP1}', 
+                //                 [Revise1_1] = '${SET01[i].Revise1_1}', 
+                //                 [Sublead1_1] = '${SET01[i].Sublead1_1}', 
+                //                 [GL1_1] = '${SET01[i].GL1_1}', 
+                //                 [MGR1_1] = '${SET01[i].MGR1_1}', 
+                //                 [JP1_1] = '${SET01[i].JP1_1}', 
+                //                 [Revise1_2] = '${SET01[i].Revise1_2}', 
+                //                 [Sublead1_2] = '${SET01[i].Sublead1_2}', 
+                //                 [GL1_2] = '${SET01[i].GL1_2}', 
+                //                 [MGR1_2] = '${SET01[i].MGR1_2}', 
+                //                 [JP1_2] = '${SET01[i].JP1_2}', 
+                //                 [Revise1_3] = '${SET01[i].Revise1_3}', 
+                //                 [Sublead1_3] = '${SET01[i].Sublead1_3}', 
+                //                 [GL1_3] = '${SET01[i].GL1_3}', 
+                //                 [MGR1_3] = '${SET01[i].MGR1_3}', 
+                //                 [JP1_3] = '${SET01[i].JP1_3}', 
+                //                 [BDPrepare1] = '${SET01[i].BDPrepare1}', 
+                //                 [BDTTC1] = '${SET01[i].BDTTC1}', 
+                //                 [BDIssue1] = '${SET01[i].BDIssue1}', 
+                //                 [BDSublead1] = '${SET01[i].BDSublead1}', 
+                //                 [BDGL1] = '${SET01[i].BDGL1}', 
+                //                 [BDMGR1] = '${SET01[i].BDMGR1}', 
+                //                 [BDJP1] = '${SET01[i].BDJP1}', 
+                //                 [BDRevise1_1] = '${SET01[i].BDRevise1_1}', 
+                //                 [BDSublead1_1] = '${SET01[i].BDSublead1_1}', 
+                //                 [BDGL1_1] = '${SET01[i].BDGL1_1}', 
+                //                 [BDMGR1_1] = '${SET01[i].BDMGR1_1}', 
+                //                 [BDJP1_1] = '${SET01[i].BDJP1_1}', 
+                //                 [BDRevise1_2] = '${SET01[i].BDRevise1_2}', 
+                //                 [BDSublead1_2] = '${SET01[i].BDSublead1_2}', 
+                //                 [BDGL1_2] = '${SET01[i].BDGL1_2}', 
+                //                 [BDMGR1_2] = '${SET01[i].BDMGR1_2}', 
+                //                 [BDJP1_2] = '${SET01[i].BDJP1_2}', 
+                //                 [BDRevise1_3] = '${SET01[i].BDRevise1_3}', 
+                //                 [BDSublead1_3] = '${SET01[i].BDSublead1_3}', 
+                //                 [BDGL1_3] = '${SET01[i].BDGL1_3}', 
+                //                 [BDMGR1_3] = '${SET01[i].BDMGR1_3}', 
+                //                 [BDJP1_3] = '${SET01[i].BDJP1_3}', 
+                //                 [BDSent1] = '${SET01[i].BDSent1}', 
+                //                 [Stage1] = '${SET01[i].Stage1}',
+                //                 [Reason1] = '${SET01[i].Reason1}', 
+                //                 [ReqNo2] = '${SET01[i].ReqNo2}', 
+                //                 [Freq2] = '${SET01[i].Freq2}', 
+                //                 [Evaluation2] = '${SET01[i].Evaluation2}', 
+                //                 [PlanSam2] = '${SET01[i].PlanSam2}', 
+                //                 [ActSam2] = '${SET01[i].ActSam2}', 
+                //                 [RepDue2] = '${SET01[i].RepDue2}', 
+                //                 [SentRep2] = '${SET01[i].SentRep2}', 
+                //                 [RepDays2] = '${SET01[i].RepDays2}', 
+                //                 [Request2] = '${SET01[i].Request2}', 
+                //                 [TTCResult2] = '${SET01[i].TTCResult2}', 
+                //                 [IssueDate2] = '${SET01[i].IssueDate2}', 
+                //                 [Sublead2] = '${SET01[i].Sublead2}', 
+                //                 [GL2] = '${SET01[i].GL2}', 
+                //                 [MGR2] = '${SET01[i].MGR2}', 
+                //                 [JP2] = '${SET01[i].JP2}', 
+                //                 [Revise2_1] = '${SET01[i].Revise2_1}', 
+                //                 [Sublead2_1] = '${SET01[i].Sublead2_1}', 
+                //                 [GL2_1] = '${SET01[i].GL2_1}', 
+                //                 [MGR2_1] = '${SET01[i].MGR2_1}', 
+                //                 [JP2_1] = '${SET01[i].JP2_1}', 
+                //                 [Revise2_2] = '${SET01[i].Revise2_2}', 
+                //                 [Sublead2_2] = '${SET01[i].Sublead2_2}', 
+                //                 [GL2_2] = '${SET01[i].GL2_2}', 
+                //                 [MGR2_2] = '${SET01[i].MGR2_2}', 
+                //                 [JP2_2] = '${SET01[i].JP2_2}', 
+                //                 [Revise2_3] = '${SET01[i].Revise2_3}', 
+                //                 [Sublead2_3] = '${SET01[i].Sublead2_3}', 
+                //                 [GL2_3] = '${SET01[i].GL2_3}', 
+                //                 [MGR2_3] = '${SET01[i].MGR2_3}', 
+                //                 [JP2_3] = '${SET01[i].JP2_3}', 
+                //                 [BDPrepare2] = '${SET01[i].BDPrepare2}', 
+                //                 [BDTTC2] = '${SET01[i].BDTTC2}', 
+                //                 [BDIssue2] = '${SET01[i].BDIssue2}', 
+                //                 [BDSublead2] = '${SET01[i].BDSublead2}', 
+                //                 [BDGL2] = '${SET01[i].BDGL2}', 
+                //                 [BDMGR2] = '${SET01[i].BDMGR2}', 
+                //                 [BDJP2] = '${SET01[i].BDJP2}', 
+                //                 [BDRevise2_1] = '${SET01[i].BDRevise2_1}', 
+                //                 [BDSublead2_1] = '${SET01[i].BDSublead2_1}', 
+                //                 [BDGL2_1] = '${SET01[i].BDGL2_1}', 
+                //                 [BDMGR2_1] = '${SET01[i].BDMGR2_1}', 
+                //                 [BDJP2_1] = '${SET01[i].BDJP2_1}', 
+                //                 [BDRevise2_2] = '${SET01[i].BDRevise2_2}', 
+                //                 [BDSublead2_2] = '${SET01[i].BDSublead2_2}', 
+                //                 [BDGL2_2] = '${SET01[i].BDGL2_2}', 
+                //                 [BDMGR2_2] = '${SET01[i].BDMGR2_2}', 
+                //                 [BDJP2_2] = '${SET01[i].BDJP2_2}', 
+                //                 [BDRevise2_3] = '${SET01[i].BDRevise2_3}', 
+                //                 [BDSublead2_3] = '${SET01[i].BDSublead2_3}', 
+                //                 [BDGL2_3] = '${SET01[i].BDGL2_3}', 
+                //                 [BDMGR2_3] = '${SET01[i].BDMGR2_3}', 
+                //                 [BDJP2_3] = '${SET01[i].BDJP2_3}', 
+                //                 [BDSent2] = '${SET01[i].BDSent2}', 
+                //                 [Stage2] = '${SET01[i].Stage2}',
+                //                 [Reason2] = '${SET01[i].Reason2}', 
+                //                 [ReqNo3] = '${SET01[i].ReqNo3}', 
+                //                 [Freq3] = '${SET01[i].Freq3}', 
+                //                 [Evaluation3] = '${SET01[i].Evaluation3}', 
+                //                 [PlanSam3] = '${SET01[i].PlanSam3}', 
+                //                 [ActSam3] = '${SET01[i].ActSam3}', 
+                //                 [RepDue3] = '${SET01[i].RepDue3}', 
+                //                 [SentRep3] = '${SET01[i].SentRep3}', 
+                //                 [RepDays3] = '${SET01[i].RepDays3}', 
+                //                 [Request3] = '${SET01[i].Request3}', 
+                //                 [TTCResult3] = '${SET01[i].TTCResult3}', 
+                //                 [IssueDate3] = '${SET01[i].IssueDate3}', 
+                //                 [Sublead3] = '${SET01[i].Sublead3}', 
+                //                 [GL3] = '${SET01[i].GL3}', 
+                //                 [MGR3] = '${SET01[i].MGR3}', 
+                //                 [JP3] = '${SET01[i].JP3}', 
+                //                 [Revise3_1] = '${SET01[i].Revise3_1}', 
+                //                 [Sublead3_1] = '${SET01[i].Sublead3_1}', 
+                //                 [GL3_1] = '${SET01[i].GL3_1}', 
+                //                 [MGR3_1] = '${SET01[i].MGR3_1}', 
+                //                 [JP3_1] = '${SET01[i].JP3_1}', 
+                //                 [Revise3_2] = '${SET01[i].Revise3_2}', 
+                //                 [Sublead3_2] = '${SET01[i].Sublead3_2}', 
+                //                 [GL3_2] = '${SET01[i].GL3_2}', 
+                //                 [MGR3_2] = '${SET01[i].MGR3_2}', 
+                //                 [JP3_2] = '${SET01[i].JP3_2}', 
+                //                 [Revise3_3] = '${SET01[i].Revise3_3}', 
+                //                 [Sublead3_3] = '${SET01[i].Sublead3_3}', 
+                //                 [GL3_3] = '${SET01[i].GL3_3}', 
+                //                 [MGR3_3] = '${SET01[i].MGR3_3}', 
+                //                 [JP3_3] = '${SET01[i].JP3_3}', 
+                //                 [BDPrepare3] = '${SET01[i].BDPrepare3}', 
+                //                 [BDTTC3] = '${SET01[i].BDTTC3}', 
+                //                 [BDIssue3] = '${SET01[i].BDIssue3}', 
+                //                 [BDSublead3] = '${SET01[i].BDSublead3}', 
+                //                 [BDGL3] = '${SET01[i].BDGL3}', 
+                //                 [BDMGR3] = '${SET01[i].BDMGR3}', 
+                //                 [BDJP3] = '${SET01[i].BDJP3}', 
+                //                 [BDRevise3_1] = '${SET01[i].BDRevise3_1}', 
+                //                 [BDSublead3_1] = '${SET01[i].BDSublead3_1}', 
+                //                 [BDGL3_1] = '${SET01[i].BDGL3_1}', 
+                //                 [BDMGR3_1] = '${SET01[i].BDMGR3_1}', 
+                //                 [BDJP3_1] = '${SET01[i].BDJP3_1}', 
+                //                 [BDRevise3_2] = '${SET01[i].BDRevise3_2}', 
+                //                 [BDSublead3_2] = '${SET01[i].BDSublead3_2}', 
+                //                 [BDGL3_2] = '${SET01[i].BDGL3_2}', 
+                //                 [BDMGR3_2] = '${SET01[i].BDMGR3_2}', 
+                //                 [BDJP3_2] = '${SET01[i].BDJP3_2}', 
+                //                 [BDRevise3_3] = '${SET01[i].BDRevise3_3}', 
+                //                 [BDSublead3_3] = '${SET01[i].BDSublead3_3}', 
+                //                 [BDGL3_3] = '${SET01[i].BDGL3_3}', 
+                //                 [BDMGR3_3] = '${SET01[i].BDMGR3_3}', 
+                //                 [BDJP3_3] = '${SET01[i].BDJP3_3}', 
+                //                 [BDSent3] = '${SET01[i].BDSent3}', 
+                //                 [Stage3] = '${SET01[i].Stage3}',
+                //                 [Reason3] = '${SET01[i].Reason3}', 
+                //                 [ReqNo4] = '${SET01[i].ReqNo4}', 
+                //                 [Freq4] = '${SET01[i].Freq4}', 
+                //                 [Evaluation4] = '${SET01[i].Evaluation4}', 
+                //                 [PlanSam4] = '${SET01[i].PlanSam4}', 
+                //                 [ActSam4] = '${SET01[i].ActSam4}', 
+                //                 [RepDue4] = '${SET01[i].RepDue4}', 
+                //                 [SentRep4] = '${SET01[i].SentRep4}', 
+                //                 [RepDays4] = '${SET01[i].RepDays4}', 
+                //                 [Request4] = '${SET01[i].Request4}', 
+                //                 [TTCResult4] = '${SET01[i].TTCResult4}', 
+                //                 [IssueDate4] = '${SET01[i].IssueDate4}', 
+                //                 [Sublead4] = '${SET01[i].Sublead4}', 
+                //                 [GL4] = '${SET01[i].GL4}', 
+                //                 [MGR4] = '${SET01[i].MGR4}', 
+                //                 [JP4] = '${SET01[i].JP4}', 
+                //                 [Revise4_1] = '${SET01[i].Revise4_1}', 
+                //                 [Sublead4_1] = '${SET01[i].Sublead4_1}', 
+                //                 [GL4_1] = '${SET01[i].GL4_1}', 
+                //                 [MGR4_1] = '${SET01[i].MGR4_1}', 
+                //                 [JP4_1] = '${SET01[i].JP4_1}', 
+                //                 [Revise4_2] = '${SET01[i].Revise4_2}', 
+                //                 [Sublead4_2] = '${SET01[i].Sublead4_2}', 
+                //                 [GL4_2] = '${SET01[i].GL4_2}', 
+                //                 [MGR4_2] = '${SET01[i].MGR4_2}', 
+                //                 [JP4_2] = '${SET01[i].JP4_2}', 
+                //                 [Revise4_3] = '${SET01[i].Revise4_3}', 
+                //                 [Sublead4_3] = '${SET01[i].Sublead4_3}', 
+                //                 [GL4_3] = '${SET01[i].GL4_3}', 
+                //                 [MGR4_3] = '${SET01[i].MGR4_3}', 
+                //                 [JP4_3] = '${SET01[i].JP4_3}', 
+                //                 [BDPrepare4] = '${SET01[i].BDPrepare4}', 
+                //                 [BDTTC4] = '${SET01[i].BDTTC4}', 
+                //                 [BDIssue4] = '${SET01[i].BDIssue4}', 
+                //                 [BDSublead4] = '${SET01[i].BDSublead4}', 
+                //                 [BDGL4] = '${SET01[i].BDGL4}', 
+                //                 [BDMGR4] = '${SET01[i].BDMGR4}', 
+                //                 [BDJP4] = '${SET01[i].BDJP4}', 
+                //                 [BDRevise4_1] = '${SET01[i].BDRevise4_1}', 
+                //                 [BDSublead4_1] = '${SET01[i].BDSublead4_1}', 
+                //                 [BDGL4_1] = '${SET01[i].BDGL4_1}', 
+                //                 [BDMGR4_1] = '${SET01[i].BDMGR4_1}', 
+                //                 [BDJP4_1] = '${SET01[i].BDJP4_1}', 
+                //                 [BDRevise4_2] = '${SET01[i].BDRevise4_2}', 
+                //                 [BDSublead4_2] = '${SET01[i].BDSublead4_2}', 
+                //                 [BDGL4_2] = '${SET01[i].BDGL4_2}', 
+                //                 [BDMGR4_2] = '${SET01[i].BDMGR4_2}', 
+                //                 [BDJP4_2] = '${SET01[i].BDJP4_2}', 
+                //                 [BDRevise4_3] = '${SET01[i].BDRevise4_3}', 
+                //                 [BDSublead4_3] = '${SET01[i].BDSublead4_3}', 
+                //                 [BDGL4_3] = '${SET01[i].GL4_3}', 
+                //                 [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
+                //                 [BDJP4_3] = '${SET01[i].BDJP4_3}', 
+                //                 [BDSent4] = '${SET01[i].BDSent4}',
+                //                 [Stage4] = '${SET01[i].Stage4}', 
+                //                 [Reason4] = '${SET01[i].Reason4}'
+                //                 WHERE [CustShort] = '${SET01[i].CustShort}' 
+                //                 AND [Month] = '${SET01[i].Month}' 
+                //                 AND [Year] = '${SET01[i].Year}'
+                //                 AND [ReqNo1] = '${SET01[i].ReqNo1}'
+                //                 AND [ReqNo2] = '${SET01[i].ReqNo2}'
+                //                 AND [ReqNo3] = '${SET01[i].ReqNo3}'
+                //                 AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
+                //     await mssql.qurey(queryUpdate);
+                //     // console.log('queryUpdate:' + queryUpdate);
+                //     // console.log("Update Complete " + i);
+                // } else {
+                var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_AchievedCust] 
                     ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [Request1], [TTCResult1], 
                     [IssueDate1], [Sublead1], [GL1], [MGR1], [JP1], [Revise1_1], [Sublead1_1], [GL1_1], [MGR1_1], [JP1_1], [Revise1_2], [Sublead1_2], [GL1_2], [MGR1_2], [JP1_2], [Revise1_3], [Sublead1_3], [GL1_3], [MGR1_3], [JP1_3], [BDPrepare1], [BDTTC1], [BDIssue1], [BDSublead1], [BDGL1], 
                     [BDMGR1], [BDJP1], [BDRevise1_1], [BDSublead1_1], [BDGL1_1], [BDMGR1_1], [BDJP1_1], [BDRevise1_2], [BDSublead1_2], [BDGL1_2], [BDMGR1_2], [BDJP1_2], [BDRevise1_3], [BDSublead1_3], [BDGL1_3], [BDMGR1_3], [BDJP1_3], [BDSent1], [Stage1], [Reason1], [ReqNo2], 
@@ -5108,10 +5119,10 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
                     [BDSublead4_3], [BDGL4_3], [BDMGR4_3], [BDJP4_3], [BDSent4], [Stage4], [Reason4]) 
                     values `;
 
-                    // for (i = 0; i < SET01.length; i++) {
-                    queryInsert =
-                        queryInsert +
-                        `( '${SET01[i].Type}'
+                // for (i = 0; i < SET01.length; i++) {
+                queryInsert =
+                    queryInsert +
+                    `( '${SET01[i].Type}'
                             ,'${SET01[i].MKTGroup}'
                             ,'${SET01[i].Group}'
                             ,'${SET01[i].Customer}'
@@ -5344,16 +5355,16 @@ router.post('/02SARKPI/AchievedCustomer', async (req, res) => {
                             ,'${SET01[i].Stage4}'
                             ,'${SET01[i].Reason4}'
                         )`;
-                    // if (i !== SET01.length - 1) {
-                    //     queryInsert = queryInsert + ",";
-                    // }
-                    // }
-                    query = queryInsert + ";";
-                    // query = queryDelete + queryInsert + ";";
-                    await mssql.qurey(query);
-                    // console.log('query:' + query);
-                    // console.log("Insert Complete " + i);
-                }
+                // if (i !== SET01.length - 1) {
+                //     queryInsert = queryInsert + ",";
+                // }
+                // }
+                query = queryInsert + ";";
+                // query = queryDelete + queryInsert + ";";
+                await mssql.qurey(query);
+                // console.log('query:' + query);
+                // console.log("Insert Complete " + i);
+                // }
             }
         } catch (err) {
             console.error('Error executing SQL query:', err.message);
@@ -5543,35 +5554,42 @@ const formatDate = (date) => {
 
 const callAPIsSequentially = async () => {
     const year = new Date().getFullYear();
-    const payload = { YEAR: year };
+    // const payload = { YEAR: year };
+    const payload = { YEAR: 2024 };
 
     try {
+        const StartTime = new Date();
         console.log("Calling API 1... " + formatDateTime(new Date().toISOString()));
-        const response1 = await axios.post("http://172.23.10.51:14000/02SARKPI/Service", payload);
+        const response1 = await axios.post("http://127.0.0.1:14000/02SARKPI/Service", payload);
         // console.log(response1.data);
         console.log("API 1 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 2... " + formatDateTime(new Date().toISOString()));
-        const response2 = await axios.post("http://172.23.10.51:14000/02SARKPI/Overdue", payload);
+        const response2 = await axios.post("http://127.0.0.1:14000/02SARKPI/Overdue", payload);
         // console.log(response2.data);
         console.log("API 2 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 3... " + formatDateTime(new Date().toISOString()));
-        const response3 = await axios.post("http://172.23.10.51:14000/02SARKPI/CustServiceChart", payload);
+        const response3 = await axios.post("http://127.0.0.1:14000/02SARKPI/CustServiceChart", payload);
         // console.log(response3.data);
         console.log("API 3 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 4... " + formatDateTime(new Date().toISOString()));
-        const response4 = await axios.post("http://172.23.10.51:14000/02SARKPI/ReportOverKPIChart", payload);
+        const response4 = await axios.post("http://127.0.0.1:14000/02SARKPI/ReportOverKPIChart", payload);
         // console.log(response4.data);
         console.log("API 4 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 5... " + formatDateTime(new Date().toISOString()));
-        const response5 = await axios.post("http://172.23.10.51:14000/02SARKPI/AchievedCustomer", payload);
+        const response5 = await axios.post("http://127.0.0.1:14000/02SARKPI/AchievedCustomer", payload);
         // console.log(response5.data);
         console.log("API 5 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("All APIs completed! " + formatDateTime(new Date().toISOString()));
+        const FinishTime = new Date();
+        const duration = FinishTime - StartTime;
+        const seconds = Math.floor(duration / 1000);
+        const milliseconds = duration % 1000;
+        console.log(`Total duration: ${seconds} seconds and ${milliseconds} milliseconds`);
     } catch (error) {
         console.error("Error occurred:", error.message);
     }
