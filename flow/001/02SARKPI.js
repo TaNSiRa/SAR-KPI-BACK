@@ -5554,8 +5554,8 @@ const formatDate = (date) => {
 
 const callAPIsSequentially = async () => {
     const year = new Date().getFullYear();
-    // const payload = { YEAR: year };
-    const payload = { YEAR: 2024 };
+    const payload = { YEAR: year };
+    // const payload = { YEAR: 2023 };
 
     try {
         const StartTime = new Date();
