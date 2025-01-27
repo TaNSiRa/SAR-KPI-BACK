@@ -5441,7 +5441,7 @@ async function calculateRepDue(startDate, addDays) {
         const currentDate = date.toISOString().split('T')[0];
 
         const isHoliday = holidays.has(currentDate);
-        console.log(isHoliday);
+        // console.log(isHoliday);
         if (!isHoliday) {
             addedDays++;
         }
