@@ -5441,11 +5441,15 @@ async function calculateRepDue(startDate, addDays) {
         const currentDate = date.toISOString().split('T')[0];
 
         const isHoliday = holidays.has(currentDate);
-
+        console.log(isHoliday);
         if (!isHoliday) {
             addedDays++;
         }
 
+        date.setDate(date.getDate() + 1);
+    }
+
+    while (holidays.has(date.toISOString().split('T')[0])) {
         date.setDate(date.getDate() + 1);
     }
 
@@ -5544,27 +5548,27 @@ const callAPIsSequentially = async () => {
     try {
         const StartTime = new Date();
         console.log("Calling API 1... " + formatDateTime(new Date().toISOString()));
-        const response1 = await axios.post("http://172.23.10.51:14000/02SARKPI/Service", payload);
+        const response1 = await axios.post("http://127.0.0.1:14000/02SARKPI/Service", payload);
         // console.log(response1.data);
         console.log("API 1 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 2... " + formatDateTime(new Date().toISOString()));
-        const response2 = await axios.post("http://172.23.10.51:14000/02SARKPI/Overdue", payload);
+        const response2 = await axios.post("http://127.0.0.1:14000/02SARKPI/Overdue", payload);
         // console.log(response2.data);
         console.log("API 2 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 3... " + formatDateTime(new Date().toISOString()));
-        const response3 = await axios.post("http://172.23.10.51:14000/02SARKPI/CustServiceChart", payload);
+        const response3 = await axios.post("http://127.0.0.1:14000/02SARKPI/CustServiceChart", payload);
         // console.log(response3.data);
         console.log("API 3 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 4... " + formatDateTime(new Date().toISOString()));
-        const response4 = await axios.post("http://172.23.10.51:14000/02SARKPI/ReportOverKPIChart", payload);
+        const response4 = await axios.post("http://127.0.0.1:14000/02SARKPI/ReportOverKPIChart", payload);
         // console.log(response4.data);
         console.log("API 4 Completed " + formatDateTime(new Date().toISOString()));
 
         console.log("Calling API 5... " + formatDateTime(new Date().toISOString()));
-        const response5 = await axios.post("http://172.23.10.51:14000/02SARKPI/AchievedCustomer", payload);
+        const response5 = await axios.post("http://127.0.0.1:14000/02SARKPI/AchievedCustomer", payload);
         // console.log(response5.data);
         console.log("API 5 Completed " + formatDateTime(new Date().toISOString()));
 
