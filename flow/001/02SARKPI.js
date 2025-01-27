@@ -1889,11 +1889,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                         const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_Overdue]
                             WHERE [CustShort] = '${SET01[i].CustShort}' 
                             AND [Month] = '${SET01[i].Month}' 
-                            AND [Year] = '${SET01[i].Year}'
-                            AND ([ReqNo1] = '${SET01[i].ReqNo1}'
-                            OR [ReqNo2] = '${SET01[i].ReqNo2}'
-                            OR [ReqNo3] = '${SET01[i].ReqNo3}'
-                            OR [ReqNo4] = '${SET01[i].ReqNo4}')`;
+                            AND [Year] = '${SET01[i].Year}'`;
                         const result = await mssql.qurey(queryCheck);
                         if (result.recordset[0].count > 0) {
                             const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Overdue]
@@ -2123,11 +2119,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                                     [BDSent4] = '${SET01[i].BDSent4}',
                                     WHERE [CustShort] = '${SET01[i].CustShort}' 
                                     AND [Month] = '${SET01[i].Month}' 
-                                    AND [Year] = '${SET01[i].Year}'
-                                    AND [ReqNo1] = '${SET01[i].ReqNo1}'
-                                    AND [ReqNo2] = '${SET01[i].ReqNo2}'
-                                    AND [ReqNo3] = '${SET01[i].ReqNo3}'
-                                    AND [ReqNo4] = '${SET01[i].ReqNo4}';`;
+                                    AND [Year] = '${SET01[i].Year}';`;
                             await mssql.qurey(queryUpdate);
                             // console.log(queryUpdate);
                             // console.log("Update Complete " + i);
