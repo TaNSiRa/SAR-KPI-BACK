@@ -1886,13 +1886,16 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                 }
                 try {
                     for (let i = 0; i < SET01.length; i++) {
-                        const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_Overdue]
+                        if (SET01[i].Month != '' && SET01[i].Year != '' && SET01[i].Month != null && SET01[i].Year != null) {
+                            const queryCheck = `SELECT COUNT(*) AS count FROM [SARKPI].[dbo].[KPI_Overdue] 
                             WHERE [CustShort] = '${SET01[i].CustShort}' 
                             AND [Month] = '${SET01[i].Month}' 
                             AND [Year] = '${SET01[i].Year}'`;
-                        const result = await mssql.qurey(queryCheck);
-                        if (result.recordset[0].count > 0) {
-                            const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Overdue]
+                            const result = await mssql.qurey(queryCheck);
+                            // console.log('result:' + result.recordset[0].count + ' ' + SET01[i].CustShort);
+                            // console.log(SET01[i].CustShort + ' ' + queryCheck);
+                            if (result.recordset[0].count > 0) {
+                                const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Overdue]
                                  SET [Type] = '${SET01[i].Type}', 
                                     [MKTGroup] = '${SET01[i].MKTGroup}', 
                                     [Group] = '${SET01[i].Group}', 
@@ -2116,15 +2119,15 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                                     [BDGL4_3] = '${SET01[i].GL4_3}', 
                                     [BDMGR4_3] = '${SET01[i].BDMGR4_3}', 
                                     [BDJP4_3] = '${SET01[i].BDJP4_3}', 
-                                    [BDSent4] = '${SET01[i].BDSent4}',
+                                    [BDSent4] = '${SET01[i].BDSent4}'
                                     WHERE [CustShort] = '${SET01[i].CustShort}' 
                                     AND [Month] = '${SET01[i].Month}' 
                                     AND [Year] = '${SET01[i].Year}';`;
-                            await mssql.qurey(queryUpdate);
-                            // console.log(queryUpdate);
-                            // console.log("Update Complete " + i);
-                        } else {
-                            var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_Overdue] 
+                                await mssql.qurey(queryUpdate);
+                                // console.log(queryUpdate);
+                                // console.log("Update Complete " + i);
+                            } else {
+                                var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_Overdue] 
                         ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [Request1], [TTCResult1], 
                         [IssueDate1], [Sublead1], [GL1], [MGR1], [JP1], [Revise1_1], [Sublead1_1], [GL1_1], [MGR1_1], [JP1_1], [Revise1_2], [Sublead1_2], [GL1_2], [MGR1_2], [JP1_2], [Revise1_3], [Sublead1_3], [GL1_3], [MGR1_3], [JP1_3], [BDPrepare1], [BDTTC1], [BDIssue1], [BDSublead1], [BDGL1], 
                         [BDMGR1], [BDJP1], [BDRevise1_1], [BDSublead1_1], [BDGL1_1], [BDMGR1_1], [BDJP1_1], [BDRevise1_2], [BDSublead1_2], [BDGL1_2], [BDMGR1_2], [BDJP1_2], [BDRevise1_3], [BDSublead1_3], [BDGL1_3], [BDMGR1_3], [BDJP1_3], [BDSent1], [Stage1], [Reason1], [ReqNo2], 
@@ -2138,7 +2141,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                         [BDSublead4_3], [BDGL4_3], [BDMGR4_3], [BDJP4_3], [BDSent4], [Stage4], [Reason4]) 
                         values `;
 
-                            for (i = 0; i < SET01.length; i++) {
+                                // for (i = 0; i < SET01.length; i++) {
                                 queryInsert =
                                     queryInsert +
                                     `( '${SET01[i].Type}'
@@ -2373,17 +2376,18 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                                 ,'${SET01[i].BDSent4}'
                                 ,'${SET01[i].Stage4}'
                                 ,'${SET01[i].Reason4}'
-                            )`;
-                                if (i !== SET01.length - 1) {
-                                    queryInsert = queryInsert + ",";
-                                }
+                                )`;
+                                // if (i !== SET01.length - 1) {
+                                //     queryInsert = queryInsert + ",";
+                                // }
+                                // }
+                                query = queryInsert + ";";
+                                // query = queryDelete + queryInsert + ";";
+                                await mssql.qurey(query);
+                                // console.log(query);
+                                console.log("Insert Complete " + i);
                             }
-                            query = queryInsert + ";";
-                            // query = queryDelete + queryInsert + ";";
-                            await mssql.qurey(query);
-                            // console.log(query);
-                            // console.log("Insert Complete " + i);
-                        }
+                        } else { }
                     }
                 } catch (err) {
                     console.error('Error executing SQL query:', err.message);
