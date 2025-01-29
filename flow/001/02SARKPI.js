@@ -2385,7 +2385,7 @@ router.post('/02SARKPI/Overdue', async (req, res) => {
                                 // query = queryDelete + queryInsert + ";";
                                 await mssql.qurey(query);
                                 // console.log(query);
-                                console.log("Insert Complete " + i);
+                                // console.log("Insert Complete " + i);
                             }
                         } else { }
                     }
