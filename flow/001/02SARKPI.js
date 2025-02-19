@@ -29,20 +29,68 @@ router.get('/02SARKPI/TEST', async (req, res) => {
 //     return res.json(output);
 // });
 
-router.post('/02SARKPI/ServiceSelect', async (req, res) => {
-    //-------------------------------------
-    console.log("--MKTKPI/ServiceSelect--");
-    //-------------------------------------
-    let output = [];
-    let query = `SELECT * From [SARKPI].[dbo].[KPI_Service] `
-    let db = await mssql.qurey(query);
-    if (db["recordsets"].length > 0) {
-        let buffer = db["recordsets"][0];
-        console.log("Alldata: " + buffer.length);
-        output = buffer;
+// router.post('/02SARKPI/ServiceSelect', async (req, res) => {
+//     //-------------------------------------
+//     console.log("--MKTKPI/ServiceSelect--");
+//     //-------------------------------------
+//     let output = [];
+//     let query = `SELECT * From [SARKPI].[dbo].[KPI_Service] `
+//     let db = await mssql.qurey(query);
+//     if (db["recordsets"].length > 0) {
+//         let buffer = db["recordsets"][0];
+//         console.log("Alldata: " + buffer.length);
+//         output = buffer;
+//     }
+//     //-------------------------------------
+//     return res.json(output);
+// });
+
+let cachedServiceData = [];
+
+async function fetchServiceData() {
+    console.log("-- Fetching Service Data --");
+    try {
+        let query = `SELECT * FROM [SARKPI].[dbo].[KPI_Service]`;
+        let db = await mssql.qurey(query);
+        if (db["recordsets"].length > 0) {
+            cachedServiceData = db["recordsets"][0];
+            console.log("Data fetched at:", new Date().toLocaleString());
+        }
+    } catch (error) {
+        console.error("Error fetching data:", error);
     }
-    //-------------------------------------
-    return res.json(output);
+}
+
+function scheduleDataFetch() {
+    const now = new Date();
+    const nextFetch = new Date();
+    nextFetch.setHours(6, 0, 0, 0);
+
+    if (now > nextFetch) {
+        nextFetch.setDate(nextFetch.getDate() + 1);
+    }
+
+    const timeUntilNextFetch = nextFetch - now;
+    setTimeout(() => {
+        fetchServiceData(); // ดึงข้อมูลครั้งแรก
+        setInterval(fetchServiceData, 24 * 60 * 60 * 1000);
+    }, timeUntilNextFetch);
+}
+
+scheduleDataFetch();
+fetchServiceData();
+
+router.post('/02SARKPI/ServiceSelectCache', (req, res) => {
+    console.log("--02SARKPI/ServiceSelectCache--");
+    res.json(cachedServiceData);
+});
+
+router.post('/02SARKPI/ServiceSelectRefresh', async (req, res) => {
+
+    let data = await fetchServiceData();
+    // res.json({ message: "Data refreshed successfully", data: cachedServiceData });
+    // res.json(cachedServiceData);
+    return res.json("TEST2");
 });
 
 // router.post('/02SARKPI/OverdueSelect', async (req, res) => {
