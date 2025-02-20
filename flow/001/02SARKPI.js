@@ -506,7 +506,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             const maxSendDate = matchingRequests
                                 .filter(record => record['ReqNo'] === reqNo)
                                 .reduce((maxDate, record) => {
-                                    const currentSendDate = new Date(record['SendDate']);
+                                    const currentSendDate = new Date(record['ReceiveDate']);
                                     return currentSendDate > maxDate ? currentSendDate : maxDate;
                                 }, new Date(req.SendDate));
 
