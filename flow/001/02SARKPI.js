@@ -259,6 +259,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         "RepDue1": "",
                         "SentRep1": "",
                         "RepDays1": "",
+                        "TS_Send1": "",
+                        "TTC_Receive1": "",
                         "Request1": "",
                         "TTCResult1": "",
                         "IssueDate1": "",
@@ -314,6 +316,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         "RepDue2": "",
                         "SentRep2": "",
                         "RepDays2": "",
+                        "TS_Send2": "",
+                        "TTC_Receive2": "",
                         "Request2": "",
                         "TTCResult2": "",
                         "IssueDate2": "",
@@ -369,6 +373,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         "RepDue3": "",
                         "SentRep3": "",
                         "RepDays3": "",
+                        "TS_Send3": "",
+                        "TTC_Receive3": "",
                         "Request3": "",
                         "TTCResult3": "",
                         "IssueDate3": "",
@@ -424,6 +430,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         "RepDue4": "",
                         "SentRep4": "",
                         "RepDays4": "",
+                        "TS_Send4": "",
+                        "TTC_Receive4": "",
                         "Request4": "",
                         "TTCResult4": "",
                         "IssueDate4": "",
@@ -470,7 +478,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         "BDJP4_3": "",
                         "BDSent4": "",
                         "Stage4": "",
-                        "Reason4": ""
+                        "Reason4": "",
+
                     }));
                     console.log('Year ' + year + ' Month ' + (p + 1) + " AllCustomer: " + SET01.length)
                     console.log("On process...");
@@ -498,6 +507,12 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             const reqNo = req.ReqNo;
                             const custshort = req.CustShort;
                             const CloseLine = req.RequestStatus;
+                            const maxTSSendDate = matchingRequests
+                                .filter(record => record['ReqNo'] === reqNo)
+                                .reduce((maxDate, record) => {
+                                    const currentSendDate = new Date(record['SendDate']);
+                                    return currentSendDate > maxDate ? currentSendDate : maxDate;
+                                }, new Date(req.SendDate));
                             // console.log("custshort: " + custshort);
                             // console.log("lastcustshort: " + lastcustshort);
                             // console.log("reqNo: " + reqNo);
@@ -508,7 +523,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 .reduce((maxDate, record) => {
                                     const currentSendDate = new Date(record['ReceiveDate']);
                                     return currentSendDate > maxDate ? currentSendDate : maxDate;
-                                }, new Date(req.SendDate));
+                                }, new Date(req.ReceiveDate));
 
                             const maxResultApproveDate = matchingRequests
                                 .filter(record => record['ReqNo'] === reqNo)
@@ -700,6 +715,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                         entry["RepDue1"] = RepDue.RepDue;
                                         entry["SentRep1"] = formatDate(sentRepDate);
                                         entry["RepDays1"] = RepDays;
+                                        entry["TS_Send1"] = formatDate(maxTSSendDate);
+                                        entry["TTC_Receive1"] = formatDate(maxSendDate);
                                         entry["Request1"] = formatDate(maxSendDate);
                                         entry["TTCResult1"] = formatDate(maxResultApproveDate);
                                         entry["IssueDate1"] = formatDate(issueDate);
@@ -768,6 +785,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                         entry["RepDue2"] = RepDue.RepDue;
                                         entry["SentRep2"] = formatDate(sentRepDate);
                                         entry["RepDays2"] = RepDays;
+                                        entry["TS_Send2"] = formatDate(maxTSSendDate);
+                                        entry["TTC_Receive2"] = formatDate(maxSendDate);
                                         entry["Request2"] = formatDate(maxSendDate);
                                         entry["TTCResult2"] = formatDate(maxResultApproveDate);
                                         entry["IssueDate2"] = formatDate(issueDate);
@@ -836,6 +855,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                         entry["RepDue3"] = RepDue.RepDue;
                                         entry["SentRep3"] = formatDate(sentRepDate);
                                         entry["RepDays3"] = RepDays;
+                                        entry["TS_Send3"] = formatDate(maxTSSendDate);
+                                        entry["TTC_Receive3"] = formatDate(maxSendDate);
                                         entry["Request3"] = formatDate(maxSendDate);
                                         entry["TTCResult3"] = formatDate(maxResultApproveDate);
                                         entry["IssueDate3"] = formatDate(issueDate);
@@ -904,6 +925,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                         entry["RepDue4"] = RepDue.RepDue;
                                         entry["SentRep4"] = formatDate(sentRepDate);
                                         entry["RepDays4"] = RepDays;
+                                        entry["TS_Send4"] = formatDate(maxTSSendDate);
+                                        entry["TTC_Receive4"] = formatDate(maxSendDate);
                                         entry["Request4"] = formatDate(maxSendDate);
                                         entry["TTCResult4"] = formatDate(maxResultApproveDate);
                                         entry["IssueDate4"] = formatDate(issueDate);
@@ -1518,7 +1541,9 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                     [ActSam1] = '${SET01[i].ActSam1}', 
                                     [RepDue1] = '${SET01[i].RepDue1}', 
                                     [SentRep1] = '${SET01[i].SentRep1}', 
-                                    [RepDays1] = '${SET01[i].RepDays1}', 
+                                    [RepDays1] = '${SET01[i].RepDays1}',
+                                    [TS_Send1] = '${SET01[i].TS_Send1}',
+                                    [TTC_Receive1] = '${SET01[i].TTC_Receive1}', 
                                     [Request1] = '${SET01[i].Request1}', 
                                     [TTCResult1] = '${SET01[i].TTCResult1}', 
                                     [IssueDate1] = '${SET01[i].IssueDate1}', 
@@ -1572,6 +1597,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                     [RepDue2] = '${SET01[i].RepDue2}', 
                                     [SentRep2] = '${SET01[i].SentRep2}', 
                                     [RepDays2] = '${SET01[i].RepDays2}', 
+                                    [TS_Send2] = '${SET01[i].TS_Send2}',
+                                    [TTC_Receive2] = '${SET01[i].TTC_Receive2}',
                                     [Request2] = '${SET01[i].Request2}', 
                                     [TTCResult2] = '${SET01[i].TTCResult2}', 
                                     [IssueDate2] = '${SET01[i].IssueDate2}', 
@@ -1625,6 +1652,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                     [RepDue3] = '${SET01[i].RepDue3}', 
                                     [SentRep3] = '${SET01[i].SentRep3}', 
                                     [RepDays3] = '${SET01[i].RepDays3}', 
+                                    [TS_Send3] = '${SET01[i].TS_Send3}',
+                                    [TTC_Receive3] = '${SET01[i].TTC_Receive3}',
                                     [Request3] = '${SET01[i].Request3}', 
                                     [TTCResult3] = '${SET01[i].TTCResult3}', 
                                     [IssueDate3] = '${SET01[i].IssueDate3}', 
@@ -1678,6 +1707,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                     [RepDue4] = '${SET01[i].RepDue4}', 
                                     [SentRep4] = '${SET01[i].SentRep4}', 
                                     [RepDays4] = '${SET01[i].RepDays4}', 
+                                    [TS_Send4] = '${SET01[i].TS_Send4}',
+                                    [TTC_Receive4] = '${SET01[i].TTC_Receive4}',
                                     [Request4] = '${SET01[i].Request4}', 
                                     [TTCResult4] = '${SET01[i].TTCResult4}', 
                                     [IssueDate4] = '${SET01[i].IssueDate4}', 
@@ -1731,15 +1762,15 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                     // console.log("Update Complete " + i);
                                 } else {
                                     var queryInsert = `INSERT INTO [SARKPI].[dbo].[KPI_Service]
-                                ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [Request1], [TTCResult1], 
+                                ([Type], [MKTGroup], [Group], [Customer], [CustShort], [Frequency], [Incharge], [KPIServ], [KPIPeriod], [RepItems], [Month], [Year], [ReqNo1], [Freq1], [Evaluation1], [PlanSam1], [ActSam1], [RepDue1], [SentRep1], [RepDays1], [TS_Send1], [TTC_Receive1],[Request1], [TTCResult1], 
                                 [IssueDate1], [Sublead1], [GL1], [MGR1], [JP1], [Revise1_1], [Sublead1_1], [GL1_1], [MGR1_1], [JP1_1], [Revise1_2], [Sublead1_2], [GL1_2], [MGR1_2], [JP1_2], [Revise1_3], [Sublead1_3], [GL1_3], [MGR1_3], [JP1_3], [BDPrepare1], [BDTTC1], [BDIssue1], [BDSublead1], [BDGL1], 
                                 [BDMGR1], [BDJP1], [BDRevise1_1], [BDSublead1_1], [BDGL1_1], [BDMGR1_1], [BDJP1_1], [BDRevise1_2], [BDSublead1_2], [BDGL1_2], [BDMGR1_2], [BDJP1_2], [BDRevise1_3], [BDSublead1_3], [BDGL1_3], [BDMGR1_3], [BDJP1_3], [BDSent1], [Stage1], [Reason1], [ReqNo2], 
-                                [Freq2], [Evaluation2], [PlanSam2], [ActSam2], [RepDue2], [SentRep2], [RepDays2], [Request2], [TTCResult2], [IssueDate2], [Sublead2], [GL2], [MGR2], [JP2], [Revise2_1], [Sublead2_1], [GL2_1], [MGR2_1], [JP2_1], [Revise2_2], [Sublead2_2], [GL2_2], [MGR2_2], [JP2_2], 
+                                [Freq2], [Evaluation2], [PlanSam2], [ActSam2], [RepDue2], [SentRep2], [RepDays2], [TS_Send2], [TTC_Receive2],[Request2], [TTCResult2], [IssueDate2], [Sublead2], [GL2], [MGR2], [JP2], [Revise2_1], [Sublead2_1], [GL2_1], [MGR2_1], [JP2_1], [Revise2_2], [Sublead2_2], [GL2_2], [MGR2_2], [JP2_2], 
                                 [Revise2_3], [Sublead2_3], [GL2_3], [MGR2_3], [JP2_3], [BDPrepare2], [BDTTC2], [BDIssue2], [BDSublead2], [BDGL2], [BDMGR2], [BDJP2], [BDRevise2_1], [BDSublead2_1], [BDGL2_1], [BDMGR2_1], [BDJP2_1], [BDRevise2_2], [BDSublead2_2], [BDGL2_2], [BDMGR2_2], 
-                                [BDJP2_2], [BDRevise2_3], [BDSublead2_3], [BDGL2_3], [BDMGR2_3], [BDJP2_3], [BDSent2], [Stage2], [Reason2], [ReqNo3], [Freq3], [Evaluation3], [PlanSam3], [ActSam3], [RepDue3], [SentRep3], [RepDays3], [Request3], [TTCResult3], [IssueDate3], [Sublead3], [GL3], [MGR3], [JP3], 
+                                [BDJP2_2], [BDRevise2_3], [BDSublead2_3], [BDGL2_3], [BDMGR2_3], [BDJP2_3], [BDSent2], [Stage2], [Reason2], [ReqNo3], [Freq3], [Evaluation3], [PlanSam3], [ActSam3], [RepDue3], [SentRep3], [RepDays3], [TS_Send3], [TTC_Receive3],[Request3], [TTCResult3], [IssueDate3], [Sublead3], [GL3], [MGR3], [JP3], 
                                 [Revise3_1], [Sublead3_1], [GL3_1], [MGR3_1], [JP3_1], [Revise3_2], [Sublead3_2], [GL3_2], [MGR3_2], [JP3_2], [Revise3_3], [Sublead3_3], [GL3_3], [MGR3_3], [JP3_3], [BDPrepare3], [BDTTC3], [BDIssue3], [BDSublead3], [BDGL3], [BDMGR3], [BDJP3], [BDRevise3_1], 
                                 [BDSublead3_1], [BDGL3_1], [BDMGR3_1], [BDJP3_1], [BDRevise3_2], [BDSublead3_2], [BDGL3_2], [BDMGR3_2], [BDJP3_2], [BDRevise3_3], [BDSublead3_3], [BDGL3_3], [BDMGR3_3], [BDJP3_3], [BDSent3], [Stage3], [Reason3], [ReqNo4], [Freq4], [Evaluation4], [PlanSam4], 
-                                [ActSam4], [RepDue4], [SentRep4], [RepDays4], [Request4], [TTCResult4], [IssueDate4], [Sublead4], [GL4], [MGR4], [JP4], [Revise4_1], [Sublead4_1], [GL4_1], [MGR4_1], [JP4_1], [Revise4_2], [Sublead4_2], [GL4_2], [MGR4_2], [JP4_2], [Revise4_3], [Sublead4_3], [GL4_3], 
+                                [ActSam4], [RepDue4], [SentRep4], [RepDays4], [TS_Send4], [TTC_Receive4],[Request4], [TTCResult4], [IssueDate4], [Sublead4], [GL4], [MGR4], [JP4], [Revise4_1], [Sublead4_1], [GL4_1], [MGR4_1], [JP4_1], [Revise4_2], [Sublead4_2], [GL4_2], [MGR4_2], [JP4_2], [Revise4_3], [Sublead4_3], [GL4_3], 
                                 [MGR4_3], [JP4_3], [BDPrepare4], [BDTTC4], [BDIssue4], [BDSublead4], [BDGL4], [BDMGR4], [BDJP4], [BDRevise4_1], [BDSublead4_1], [BDGL4_1], [BDMGR4_1], [BDJP4_1], [BDRevise4_2], [BDSublead4_2], [BDGL4_2], [BDMGR4_2], [BDJP4_2], [BDRevise4_3], 
                                 [BDSublead4_3], [BDGL4_3], [BDMGR4_3], [BDJP4_3], [BDSent4], [Stage4], [Reason4]) 
                                  values `;
@@ -1767,6 +1798,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 ,'${SET01[i].RepDue1}'
                                 ,'${SET01[i].SentRep1}'
                                 ,'${SET01[i].RepDays1}'
+                                ,'${SET01[i].TS_Send1}'
+                                ,'${SET01[i].TTC_Receive1}'
                                 ,'${SET01[i].Request1}'
                                 ,'${SET01[i].TTCResult1}'
                                 ,'${SET01[i].IssueDate1}'
@@ -1822,6 +1855,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 ,'${SET01[i].RepDue2}'
                                 ,'${SET01[i].SentRep2}'
                                 ,'${SET01[i].RepDays2}'
+                                ,'${SET01[i].TS_Send2}'
+                                ,'${SET01[i].TTC_Receive2}'
                                 ,'${SET01[i].Request2}'
                                 ,'${SET01[i].TTCResult2}'
                                 ,'${SET01[i].IssueDate2}'
@@ -1877,6 +1912,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 ,'${SET01[i].RepDue3}'  
                                 ,'${SET01[i].SentRep3}'
                                 ,'${SET01[i].RepDays3}'
+                                ,'${SET01[i].TS_Send3}'
+                                ,'${SET01[i].TTC_Receive3}'
                                 ,'${SET01[i].Request3}'
                                 ,'${SET01[i].TTCResult3}'
                                 ,'${SET01[i].IssueDate3}'
@@ -1932,6 +1969,8 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 ,'${SET01[i].RepDue4}'
                                 ,'${SET01[i].SentRep4}'
                                 ,'${SET01[i].RepDays4}'
+                                ,'${SET01[i].TS_Send4}'
+                                ,'${SET01[i].TTC_Receive4}'
                                 ,'${SET01[i].Request4}'
                                 ,'${SET01[i].TTCResult4}'
                                 ,'${SET01[i].IssueDate4}'
