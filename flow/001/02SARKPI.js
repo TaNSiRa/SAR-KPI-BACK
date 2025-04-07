@@ -6411,6 +6411,10 @@ async function calculateBusinessDays(startDate, endDate) {
     let SetendDate = new Date(endDate);
     SetendDate.setHours(0, 0, 0, 0);
 
+    if (SetstartDate === SetendDate) {
+        return 0;
+    }
+
     if (!holidays) {
         throw new Error("Holidays data has not been loaded. Please call loadHolidays() first.");
     }
