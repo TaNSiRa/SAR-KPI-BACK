@@ -6411,7 +6411,7 @@ async function calculateBusinessDays(startDate, endDate) {
     let SetendDate = new Date(endDate);
     SetendDate.setHours(0, 0, 0, 0);
 
-    if (SetstartDate === SetendDate) {
+    if (SetstartDate.getTime() === SetendDate.getTime()) {
         return 0;
     }
 
