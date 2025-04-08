@@ -497,22 +497,34 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             // console.log(j);
                             const req = matchingRequests[j];
                             const samplingDate = new Date(req.SamplingDate);
+                            const samplingDate1 = adjust7Hours(new Date(req.SamplingDate));
                             const dayOfMonth = samplingDate.getDate();
                             const monthString = samplingDate.toLocaleString('en-US', { month: '2-digit' });
                             const yearString = samplingDate.getFullYear().toString();
                             const kpiPeriod = entry.KPIPeriod;
                             const RepDue = await calculateRepDue(samplingDate, kpiPeriod) ?? "";
-                            const sentRepDate = new Date(req.SentRep);
+                            const sentRepDate = adjust7Hours(new Date(req.SentRep));
                             const RepDays = await calculateBusinessDays(samplingDate, sentRepDate) ?? "";
                             const reqNo = req.ReqNo;
                             const custshort = req.CustShort;
+
+                            // if (custshort === "CYCM#WASH") {
+                            //     console.log("--------------------------------------------");
+                            //     console.log("SamplingDate: " + samplingDate);
+                            //     console.log("samplingDate1: " + samplingDate1);
+                            //     console.log("custshort: " + custshort);
+                            //     console.log("sentRepDate: " + sentRepDate);
+                            //     console.log("FormatDate: " + formatDate(samplingDate));
+                            //     console.log("FormatDate1: " + formatDate(samplingDate1));
+                            // }
+
                             const CloseLine = req.RequestStatus;
                             const maxTSSendDate = matchingRequests
                                 .filter(record => record['ReqNo'] === reqNo)
                                 .reduce((maxDate, record) => {
-                                    const currentSendDate = new Date(record['SendDate']);
+                                    const currentSendDate = adjust7Hours(new Date(record['SendDate']));
                                     return currentSendDate > maxDate ? currentSendDate : maxDate;
-                                }, new Date(req.SendDate));
+                                }, isNaN(new Date(req.SendDate).getTime()) || new Date(req.SendDate).getTime() === 0 ? samplingDate : adjust7Hours(new Date(req.SendDate)));
                             // console.log("custshort: " + custshort);
                             // console.log("lastcustshort: " + lastcustshort);
                             // console.log("reqNo: " + reqNo);
@@ -521,16 +533,16 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             const maxSendDate = matchingRequests
                                 .filter(record => record['ReqNo'] === reqNo)
                                 .reduce((maxDate, record) => {
-                                    const currentSendDate = new Date(record['ReceiveDate']);
+                                    const currentSendDate = adjust7Hours(new Date(record['ReceiveDate']));
                                     return currentSendDate > maxDate ? currentSendDate : maxDate;
-                                }, new Date(req.ReceiveDate));
+                                }, isNaN(new Date(req.ReceiveDate).getTime()) || new Date(req.ReceiveDate).getTime() === 0 ? samplingDate : adjust7Hours(new Date(req.ReceiveDate)));
 
                             const maxResultApproveDate = matchingRequests
                                 .filter(record => record['ReqNo'] === reqNo)
                                 .reduce((maxDate, record) => {
-                                    const currentResultApproveDate = new Date(record['ResultApproveDate']);
+                                    const currentResultApproveDate = (new Date(record['ResultApproveDate']));
                                     return currentResultApproveDate > maxDate ? currentResultApproveDate : maxDate;
-                                }, new Date(req.ResultApproveDate));
+                                }, isNaN(new Date(req.ResultApproveDate).getTime()) || new Date(req.ResultApproveDate).getTime() === 0 ? samplingDate : adjust7Hours(new Date(req.ResultApproveDate)));
                             const filteredResults = routineKACData.filter(row => row.ReqNo === reqNo);
 
                             const countEvaluation = filteredResults.length === 0
@@ -570,26 +582,38 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             //         ? dbIssueDate["recordsets"][0][0]
                             //         : {};
 
-                            const issueDate = issueData['CreateReportDate'] ? new Date(issueData['CreateReportDate']) : null;
-                            const Sublead = issueData['SubLeaderTime_0'] ? new Date(issueData['SubLeaderTime_0']) : null;
-                            const GL = issueData['GLTime_0'] ? new Date(issueData['GLTime_0']) : null;
-                            const MGR = issueData['DGMTime_0'] ? new Date(issueData['DGMTime_0']) : null;
-                            const JP = issueData['JPTime_0'] ? new Date(issueData['JPTime_0']) : null;
-                            const Revise1 = issueData['InchargeTime_1'] ? new Date(issueData['InchargeTime_1']) : null;
-                            const Sublead1 = issueData['SubLeaderTime_1'] ? new Date(issueData['SubLeaderTime_1']) : null;
-                            const GL1 = issueData['GLTime_1'] ? new Date(issueData['GLTime_1']) : null;
-                            const MGR1 = issueData['DGMTime_1'] ? new Date(issueData['DGMTime_1']) : null;
-                            const JP1 = issueData['JPTime_1'] ? new Date(issueData['JPTime_1']) : null;
-                            const Revise2 = issueData['InchargeTime_2'] ? new Date(issueData['InchargeTime_2']) : null;
-                            const Sublead2 = issueData['SubLeaderTime_2'] ? new Date(issueData['SubLeaderTime_2']) : null;
-                            const GL2 = issueData['GLTime_2'] ? new Date(issueData['GLTime_2']) : null;
-                            const MGR2 = issueData['DGMTime_2'] ? new Date(issueData['DGMTime_2']) : null;
-                            const JP2 = issueData['JPTime_2'] ? new Date(issueData['JPTime_2']) : null;
-                            const Revise3 = issueData['InchargeTime_3'] ? new Date(issueData['InchargeTime_3']) : null;
-                            const Sublead3 = issueData['SubLeaderTime_3'] ? new Date(issueData['SubLeaderTime_3']) : null;
-                            const GL3 = issueData['GLTime_3'] ? new Date(issueData['GLTime_3']) : null;
-                            const MGR3 = issueData['DGMTime_3'] ? new Date(issueData['DGMTime_3']) : null;
-                            const JP3 = issueData['JPTime_3'] ? new Date(issueData['JPTime_3']) : null;
+                            // const issueDate = issueData['CreateReportDate'] ? (new Date(issueData['CreateReportDate'])) : null;
+                            const issueDate = isNaN(new Date(issueData['CreateReportDate']).getTime()) ||
+                                new Date(issueData['CreateReportDate']).getTime() === 0
+                                ? samplingDate
+                                : adjust7Hours(new Date(issueData['CreateReportDate']));
+
+
+                            if (custshort === "CYCM#WASH") {
+                                console.log("--------------------------------------------");
+                                console.log("issueData: " + issueData['CreateReportDate']);
+                                console.log("issueData1: " + new Date(issueData['CreateReportDate']));
+                                console.log("issueData2: " + adjust7Hours(new Date(issueData['CreateReportDate'])));
+                            }
+                            const Sublead = issueData['SubLeaderTime_0'] ? (new Date(issueData['SubLeaderTime_0'])) : null;
+                            const GL = issueData['GLTime_0'] ? (new Date(issueData['GLTime_0'])) : null;
+                            const MGR = issueData['DGMTime_0'] ? (new Date(issueData['DGMTime_0'])) : null;
+                            const JP = issueData['JPTime_0'] ? (new Date(issueData['JPTime_0'])) : null;
+                            const Revise1 = issueData['InchargeTime_1'] ? (new Date(issueData['InchargeTime_1'])) : null;
+                            const Sublead1 = issueData['SubLeaderTime_1'] ? (new Date(issueData['SubLeaderTime_1'])) : null;
+                            const GL1 = issueData['GLTime_1'] ? (new Date(issueData['GLTime_1'])) : null;
+                            const MGR1 = issueData['DGMTime_1'] ? (new Date(issueData['DGMTime_1'])) : null;
+                            const JP1 = issueData['JPTime_1'] ? (new Date(issueData['JPTime_1'])) : null;
+                            const Revise2 = issueData['InchargeTime_2'] ? (new Date(issueData['InchargeTime_2'])) : null;
+                            const Sublead2 = issueData['SubLeaderTime_2'] ? (new Date(issueData['SubLeaderTime_2'])) : null;
+                            const GL2 = issueData['GLTime_2'] ? (new Date(issueData['GLTime_2'])) : null;
+                            const MGR2 = issueData['DGMTime_2'] ? (new Date(issueData['DGMTime_2'])) : null;
+                            const JP2 = issueData['JPTime_2'] ? (new Date(issueData['JPTime_2'])) : null;
+                            const Revise3 = issueData['InchargeTime_3'] ? (new Date(issueData['InchargeTime_3'])) : null;
+                            const Sublead3 = issueData['SubLeaderTime_3'] ? (new Date(issueData['SubLeaderTime_3'])) : null;
+                            const GL3 = issueData['GLTime_3'] ? (new Date(issueData['GLTime_3'])) : null;
+                            const MGR3 = issueData['DGMTime_3'] ? (new Date(issueData['DGMTime_3'])) : null;
+                            const JP3 = issueData['JPTime_3'] ? (new Date(issueData['JPTime_3'])) : null;
                             const BDPrepare = await calculateBusinessDays(samplingDate, maxSendDate) ?? "";
                             const BDTTC = await calculateBusinessDays(maxSendDate, maxResultApproveDate) ?? "";
                             const BDIssue = await calculateBusinessDays(maxResultApproveDate, issueDate) ?? "";
@@ -666,7 +690,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                                                                         : isValidDate(Sublead) ? Sublead
                                                                                             : null ?? "";
 
-                            const BDSent = CheckSignerForBDSent ? await calculateBusinessDays(CheckSignerForBDSent, sentRepDate) : null ?? "";
+                            const BDSent = CheckSignerForBDSent ? await calculateBusinessDays(CheckSignerForBDSent, sentRepDate, custshort) : null ?? "";
                             const Reason = req.Reason ?? "";
 
                             let week = 0;
@@ -6404,17 +6428,19 @@ async function calculateRepDue(startDate, addDays) {
 //     return count;
 // }
 
-async function calculateBusinessDays(startDate, endDate) {
+async function calculateBusinessDays(startDate, endDate, custshort) {
+    // console.log('Start: ' + startDate + ' End: ' + endDate);
     let count = 0;
     let SetstartDate = new Date(startDate);
     SetstartDate.setHours(0, 0, 0, 0);
     let SetendDate = new Date(endDate);
     SetendDate.setHours(0, 0, 0, 0);
 
-    if (SetstartDate.getTime() === SetendDate.getTime()) {
-        return 0;
-    }
 
+
+    // if (custshort === "IMCT-S#B") {
+    //     console.log('Start: ' + SetstartDate + ' End: ' + SetendDate);
+    // }
     if (!holidays) {
         throw new Error("Holidays data has not been loaded. Please call loadHolidays() first.");
     }
@@ -6423,11 +6449,20 @@ async function calculateBusinessDays(startDate, endDate) {
         return "";
     }
 
+    // if (SetstartDate.getTime() === SetendDate.getTime()) {
+    //     console.log("in ==");
+    //     return 0;
+    // }
+
     while (SetstartDate < SetendDate) {
         const currentDate = SetstartDate.toISOString().split('T')[0];
 
-        const isHoliday = holidays.has(currentDate);
 
+        const isHoliday = holidays.has(currentDate);
+        // if (custshort === "IMCT-S#B") {
+        //     console.log("currentDate " + currentDate);
+        //     console.log("isHoliday " + isHoliday);
+        // }
         if (!isHoliday) {
             count++;
         }
@@ -6514,6 +6549,12 @@ function formatDateTime(isoString) {
     const formattedTime = `${hours}:${minutes}:${seconds}`;
 
     return `${formattedDate} ${formattedTime}`;
+}
+
+function adjust7Hours(dateString) {
+    const date = new Date(dateString);
+    date.setHours(date.getHours() - 7);
+    return date;
 }
 
 module.exports = router;
