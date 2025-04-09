@@ -692,7 +692,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                                                                         : isValidDate(Sublead) ? Sublead
                                                                                             : null ?? "";
 
-                            const BDSent = CheckSignerForBDSent ? await calculateBusinessDays(CheckSignerForBDSent, sentRepDate, custshort) : null ?? "";
+                            const BDSent = CheckSignerForBDSent ? await calculateBusinessDays(CheckSignerForBDSent, sentRepDate) : null ?? "";
                             const Reason = req.Reason ?? "";
 
                             let week = 0;
@@ -6430,7 +6430,7 @@ async function calculateRepDue(startDate, addDays) {
 //     return count;
 // }
 
-async function calculateBusinessDays(startDate, endDate, custshort) {
+async function calculateBusinessDays(startDate, endDate) {
     // console.log('Start: ' + startDate + ' End: ' + endDate);
     let count = 0;
     let SetstartDate = new Date(startDate);
