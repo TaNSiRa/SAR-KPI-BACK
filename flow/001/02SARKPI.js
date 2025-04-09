@@ -506,6 +506,10 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             const sentRepDate = req.SentRep && !isNaN(new Date(req.SentRep).getTime())
                                 ? adjust7Hours(new Date(req.SentRep))
                                 : '';
+                            // console.log("--------------------------------------------");
+                            // console.log("sentRepDate: " + sentRepDate);
+                            // console.log(new Date(req.SentRep));
+                            // console.log(adjust7Hours(new Date(req.SentRep)));
                             const RepDays = await calculateBusinessDays(samplingDate, sentRepDate) ?? "";
                             const reqNo = req.ReqNo;
                             const custshort = req.CustShort;
@@ -6447,7 +6451,7 @@ async function calculateBusinessDays(startDate, endDate) {
         throw new Error("Holidays data has not been loaded. Please call loadHolidays() first.");
     }
 
-    if (startDate === null || startDate.getTime() === 0 || startDate.getTime() === '' || endDate === null || endDate.getTime() === 0 || endDate.getTime() === '') {
+    if (startDate === "" || startDate === null || startDate.getTime() === 0 || startDate.getTime() === '' || endDate === "" || endDate === null || endDate.getTime() === 0 || endDate.getTime() === '') {
         return "";
     }
 
