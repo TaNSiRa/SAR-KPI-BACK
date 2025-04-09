@@ -497,13 +497,15 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             // console.log(j);
                             const req = matchingRequests[j];
                             const samplingDate = new Date(req.SamplingDate);
-                            const samplingDate1 = adjust7Hours(new Date(req.SamplingDate));
+                            // const samplingDate1 = adjust7Hours(new Date(req.SamplingDate));
                             const dayOfMonth = samplingDate.getDate();
                             const monthString = samplingDate.toLocaleString('en-US', { month: '2-digit' });
                             const yearString = samplingDate.getFullYear().toString();
                             const kpiPeriod = entry.KPIPeriod;
                             const RepDue = await calculateRepDue(samplingDate, kpiPeriod) ?? "";
-                            const sentRepDate = adjust7Hours(new Date(req.SentRep));
+                            const sentRepDate = req.SentRep && !isNaN(new Date(req.SentRep).getTime())
+                                ? adjust7Hours(new Date(req.SentRep))
+                                : '';
                             const RepDays = await calculateBusinessDays(samplingDate, sentRepDate) ?? "";
                             const reqNo = req.ReqNo;
                             const custshort = req.CustShort;
@@ -589,12 +591,12 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 : adjust7Hours(new Date(issueData['CreateReportDate']));
 
 
-                            if (custshort === "CYCM#WASH") {
-                                console.log("--------------------------------------------");
-                                console.log("issueData: " + issueData['CreateReportDate']);
-                                console.log("issueData1: " + new Date(issueData['CreateReportDate']));
-                                console.log("issueData2: " + adjust7Hours(new Date(issueData['CreateReportDate'])));
-                            }
+                            // if (custshort === "CYCM#WASH") {
+                            //     console.log("--------------------------------------------");
+                            //     console.log("issueData: " + issueData['CreateReportDate']);
+                            //     console.log("issueData1: " + new Date(issueData['CreateReportDate']));
+                            //     console.log("issueData2: " + adjust7Hours(new Date(issueData['CreateReportDate'])));
+                            // }
                             const Sublead = issueData['SubLeaderTime_0'] ? (new Date(issueData['SubLeaderTime_0'])) : null;
                             const GL = issueData['GLTime_0'] ? (new Date(issueData['GLTime_0'])) : null;
                             const MGR = issueData['DGMTime_0'] ? (new Date(issueData['DGMTime_0'])) : null;
