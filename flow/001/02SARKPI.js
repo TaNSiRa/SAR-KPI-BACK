@@ -601,30 +601,37 @@ router.post('/02SARKPI/Service', async (req, res) => {
                             //     console.log("issueData1: " + new Date(issueData['CreateReportDate']));
                             //     console.log("issueData2: " + adjust7Hours(new Date(issueData['CreateReportDate'])));
                             // }
-                            const Sublead = issueData['SubLeaderTime_0'] ? (new Date(issueData['SubLeaderTime_0'])) : null;
-                            const GL = issueData['GLTime_0'] ? (new Date(issueData['GLTime_0'])) : null;
-                            const MGR = issueData['DGMTime_0'] ? (new Date(issueData['DGMTime_0'])) : null;
-                            const JP = issueData['JPTime_0'] ? (new Date(issueData['JPTime_0'])) : null;
-                            const Revise1 = issueData['InchargeTime_1'] ? (new Date(issueData['InchargeTime_1'])) : null;
-                            const Sublead1 = issueData['SubLeaderTime_1'] ? (new Date(issueData['SubLeaderTime_1'])) : null;
-                            const GL1 = issueData['GLTime_1'] ? (new Date(issueData['GLTime_1'])) : null;
-                            const MGR1 = issueData['DGMTime_1'] ? (new Date(issueData['DGMTime_1'])) : null;
-                            const JP1 = issueData['JPTime_1'] ? (new Date(issueData['JPTime_1'])) : null;
-                            const Revise2 = issueData['InchargeTime_2'] ? (new Date(issueData['InchargeTime_2'])) : null;
-                            const Sublead2 = issueData['SubLeaderTime_2'] ? (new Date(issueData['SubLeaderTime_2'])) : null;
-                            const GL2 = issueData['GLTime_2'] ? (new Date(issueData['GLTime_2'])) : null;
-                            const MGR2 = issueData['DGMTime_2'] ? (new Date(issueData['DGMTime_2'])) : null;
-                            const JP2 = issueData['JPTime_2'] ? (new Date(issueData['JPTime_2'])) : null;
-                            const Revise3 = issueData['InchargeTime_3'] ? (new Date(issueData['InchargeTime_3'])) : null;
-                            const Sublead3 = issueData['SubLeaderTime_3'] ? (new Date(issueData['SubLeaderTime_3'])) : null;
-                            const GL3 = issueData['GLTime_3'] ? (new Date(issueData['GLTime_3'])) : null;
-                            const MGR3 = issueData['DGMTime_3'] ? (new Date(issueData['DGMTime_3'])) : null;
-                            const JP3 = issueData['JPTime_3'] ? (new Date(issueData['JPTime_3'])) : null;
+                            const Sublead = issueData['SubLeaderTime_0'] ? adjust7Hours(new Date(issueData['SubLeaderTime_0'])) : null;
+                            // if (custshort === "AITH") {
+                            //     console.log("--------------------------------------------");
+                            //     console.log("Sublead: " + Sublead);
+                            //     console.log("issueData: " + issueData['SubLeaderTime_0']);
+                            //     console.log("issueData1: " + new Date(issueData['SubLeaderTime_0']));
+                            //     console.log("issueData2: " + adjust7Hours(new Date(issueData['SubLeaderTime_0'])));
+                            // }
+                            const GL = issueData['GLTime_0'] ? adjust7Hours(new Date(issueData['GLTime_0'])) : null;
+                            const MGR = issueData['DGMTime_0'] ? adjust7Hours(new Date(issueData['DGMTime_0'])) : null;
+                            const JP = issueData['JPTime_0'] ? adjust7Hours(new Date(issueData['JPTime_0'])) : null;
+                            const Revise1 = issueData['InchargeTime_1'] ? adjust7Hours(new Date(issueData['InchargeTime_1'])) : null;
+                            const Sublead1 = issueData['SubLeaderTime_1'] ? adjust7Hours(new Date(issueData['SubLeaderTime_1'])) : null;
+                            const GL1 = issueData['GLTime_1'] ? adjust7Hours(new Date(issueData['GLTime_1'])) : null;
+                            const MGR1 = issueData['DGMTime_1'] ? adjust7Hours(new Date(issueData['DGMTime_1'])) : null;
+                            const JP1 = issueData['JPTime_1'] ? adjust7Hours(new Date(issueData['JPTime_1'])) : null;
+                            const Revise2 = issueData['InchargeTime_2'] ? adjust7Hours(new Date(issueData['InchargeTime_2'])) : null;
+                            const Sublead2 = issueData['SubLeaderTime_2'] ? adjust7Hours(new Date(issueData['SubLeaderTime_2'])) : null;
+                            const GL2 = issueData['GLTime_2'] ? adjust7Hours(new Date(issueData['GLTime_2'])) : null;
+                            const MGR2 = issueData['DGMTime_2'] ? adjust7Hours(new Date(issueData['DGMTime_2'])) : null;
+                            const JP2 = issueData['JPTime_2'] ? adjust7Hours(new Date(issueData['JPTime_2'])) : null;
+                            const Revise3 = issueData['InchargeTime_3'] ? adjust7Hours(new Date(issueData['InchargeTime_3'])) : null;
+                            const Sublead3 = issueData['SubLeaderTime_3'] ? adjust7Hours(new Date(issueData['SubLeaderTime_3'])) : null;
+                            const GL3 = issueData['GLTime_3'] ? adjust7Hours(new Date(issueData['GLTime_3'])) : null;
+                            const MGR3 = issueData['DGMTime_3'] ? adjust7Hours(new Date(issueData['DGMTime_3'])) : null;
+                            const JP3 = issueData['JPTime_3'] ? adjust7Hours(new Date(issueData['JPTime_3'])) : null;
                             const BDPrepare = await calculateBusinessDays(samplingDate, maxSendDate) ?? "";
                             const BDTTC = await calculateBusinessDays(maxSendDate, maxResultApproveDate) ?? "";
                             const BDIssue = await calculateBusinessDays(maxResultApproveDate, issueDate) ?? "";
                             const isValidDate = (date) => date && date.getTime() !== 0;
-                            const BDSublead = await calculateBusinessDays(issueDate, Sublead) ?? "";
+                            const BDSublead = await calculateBusinessDays(issueDate, Sublead, custShort) ?? "";
                             const BDGL = isValidDate(Sublead) && isValidDate(GL) ? await calculateBusinessDays(Sublead, GL)
                                 : (isValidDate(issueDate) && isValidDate(GL) ? await calculateBusinessDays(issueDate, GL) : null) ?? "";
                             const BDMGR = isValidDate(GL) && isValidDate(MGR) ? await calculateBusinessDays(GL, MGR)
@@ -6434,7 +6441,7 @@ async function calculateRepDue(startDate, addDays) {
 //     return count;
 // }
 
-async function calculateBusinessDays(startDate, endDate) {
+async function calculateBusinessDays(startDate, endDate, custshort, samplingDate) {
     // console.log('Start: ' + startDate + ' End: ' + endDate);
     let count = 0;
     let SetstartDate = new Date(startDate);
@@ -6442,7 +6449,11 @@ async function calculateBusinessDays(startDate, endDate) {
     let SetendDate = new Date(endDate);
     SetendDate.setHours(0, 0, 0, 0);
 
-
+    if (custshort === "AITH") {
+        console.log("in ==");
+        console.log("SetstartDate " + SetstartDate);
+        console.log("SetendDate " + SetendDate);
+    }
 
     // if (custshort === "IMCT-S#B") {
     //     console.log('Start: ' + SetstartDate + ' End: ' + SetendDate);
@@ -6455,17 +6466,27 @@ async function calculateBusinessDays(startDate, endDate) {
         return "";
     }
 
-    // if (SetstartDate.getTime() === SetendDate.getTime()) {
-    //     console.log("in ==");
-    //     return 0;
-    // }
+    if (SetstartDate.getTime() === SetendDate.getTime()) {
+        // console.log("----------------------------------------------------------");
+        // console.log("GetTime");
+        // if (custshort === "AITH") {
+        //     console.log("in ==");
+        //     console.log("SetstartDate " + SetstartDate);
+        //     console.log("SetendDate " + SetendDate);
+        // }
+
+        return 0;
+    }
 
     while (SetstartDate < SetendDate) {
-        const currentDate = SetstartDate.toISOString().split('T')[0];
-
+        // const currentDate = SetstartDate.toISOString().split('T')[0];
+        const currentDate = Plus7Hours(SetstartDate, 7);
 
         const isHoliday = holidays.has(currentDate);
-        // if (custshort === "IMCT-S#B") {
+        // if (custshort === "AITH") {
+        //     console.log("----------------------------------------------------------");
+        //     console.log("SetstartDate " + SetstartDate);
+        //     console.log("SetendDate " + SetendDate);
         //     console.log("currentDate " + currentDate);
         //     console.log("isHoliday " + isHoliday);
         // }
@@ -6561,6 +6582,14 @@ function adjust7Hours(dateString) {
     const date = new Date(dateString);
     date.setHours(date.getHours() - 7);
     return date;
+}
+
+function Plus7Hours(date) {
+    const newDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+    const yyyy = newDate.getFullYear();
+    const mm = String(newDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(newDate.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
 }
 
 module.exports = router;
