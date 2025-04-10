@@ -6449,11 +6449,11 @@ async function calculateBusinessDays(startDate, endDate, custshort, samplingDate
     let SetendDate = new Date(endDate);
     SetendDate.setHours(0, 0, 0, 0);
 
-    if (custshort === "AITH") {
-        console.log("in ==");
-        console.log("SetstartDate " + SetstartDate);
-        console.log("SetendDate " + SetendDate);
-    }
+    // if (custshort === "AITH") {
+    //     console.log("in ==");
+    //     console.log("SetstartDate " + SetstartDate);
+    //     console.log("SetendDate " + SetendDate);
+    // }
 
     // if (custshort === "IMCT-S#B") {
     //     console.log('Start: ' + SetstartDate + ' End: ' + SetendDate);
