@@ -192,7 +192,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                 // `;
                 const queryMasterPattern = `
             SELECT * From [SAR].[dbo].[Routine_MasterPatternTS]
-            WHERE FRE != '' AND FRE != '1<' AND TYPE != '' AND GROUP != '' AND MKTGROUP != '' AND REPORTITEMS != ''
+            WHERE FRE != '' AND FRE != '1<'
             ORDER BY CustShort;
             `;
                 const dbMaster = await mssql.qurey(queryMasterPattern);
