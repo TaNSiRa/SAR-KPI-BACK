@@ -1571,11 +1571,10 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 // console.log(SET01[i].CustShort + ' ' + queryCheck);
                                 if (result.recordset[0].count > 0) {
                                     const now = new Date();
-                                    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); // เดือน 01-12
+                                    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
                                     const currentYear = now.getFullYear().toString();
-                                    console.log(SET01[i].Month + ' ' + currentMonth + ' ' + SET01[i].Year + ' ' + currentYear);
-                                    // ถ้าเป็นเดือนและปีปัจจุบัน -> update ทุก field
-                                    // ถ้าไม่ใช่ -> update โดยเว้น field ที่คุณไม่อยากแก้
+                                    // console.log(SET01[i].Month + ' ' + currentMonth + ' ' + SET01[i].Year + ' ' + currentYear);
+
                                     let extraUpdate = '';
                                     if (SET01[i].Month === currentMonth && SET01[i].Year === currentYear) {
                                         extraUpdate = `
