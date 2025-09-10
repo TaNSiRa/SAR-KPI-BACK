@@ -1576,7 +1576,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                     // console.log(SET01[i].Month + ' ' + currentMonth + ' ' + SET01[i].Year + ' ' + currentYear);
 
                                     let extraUpdate = '';
-                                    if (SET01[i].Month === currentMonth && SET01[i].Year === currentYear) {
+                                    if ((SET01[i].Month === currentMonth && SET01[i].Year === currentYear) || (SET01[i].Month === currentMonth - 1 && SET01[i].Year === currentYear)) {
                                         extraUpdate = `
                                         [Type] = '${SET01[i].Type}', 
                                         [MKTGroup] = '${SET01[i].MKTGroup}', 
