@@ -1570,17 +1570,30 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 // console.log('result:' + result.recordset[0].count + ' ' + SET01[i].CustShort);
                                 // console.log(SET01[i].CustShort + ' ' + queryCheck);
                                 if (result.recordset[0].count > 0) {
+                                    const now = new Date();
+                                    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); // เดือน 01-12
+                                    const currentYear = now.getFullYear().toString();
+
+                                    // ถ้าเป็นเดือนและปีปัจจุบัน -> update ทุก field
+                                    // ถ้าไม่ใช่ -> update โดยเว้น field ที่คุณไม่อยากแก้
+                                    let extraUpdate = '';
+                                    if (SET01[i].Month === currentMonth && SET01[i].Year === currentYear) {
+                                        extraUpdate = `
+                                        [Type] = '${SET01[i].Type}', 
+                                        [MKTGroup] = '${SET01[i].MKTGroup}', 
+                                        [Group] = '${SET01[i].Group}', 
+                                        [Frequency] = '${SET01[i].Frequency}', 
+                                        [RepItems] = '${SET01[i].RepItems}', 
+                                        [Incharge] = '${SET01[i].Incharge}', 
+                                        [KPIServ] = '${SET01[i].KPIServ}', 
+                                        [KPIPeriod] = '${SET01[i].KPIPeriod}', 
+                                    `;
+                                    }
+
                                     const queryUpdate = `UPDATE [SARKPI].[dbo].[KPI_Service]
-                                 SET [Type] = '${SET01[i].Type}', 
-                                    [MKTGroup] = '${SET01[i].MKTGroup}', 
-                                    [Group] = '${SET01[i].Group}', 
+                                 SET ${extraUpdate}
                                     [Customer] = '${SET01[i].Customer}', 
                                     [CustShort] = '${SET01[i].CustShort}', 
-                                    [Frequency] = '${SET01[i].Frequency}', 
-                                    [Incharge] = '${SET01[i].Incharge}', 
-                                    [KPIServ] = '${SET01[i].KPIServ}', 
-                                    [KPIPeriod] = '${SET01[i].KPIPeriod}', 
-                                    [RepItems] = '${SET01[i].RepItems}', 
                                     [Month] = '${SET01[i].Month}', 
                                     [Year] = '${SET01[i].Year}', 
                                     [ReqNo1] = '${SET01[i].ReqNo1}', 
