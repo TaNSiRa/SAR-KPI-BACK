@@ -1571,12 +1571,17 @@ router.post('/02SARKPI/Service', async (req, res) => {
                                 // console.log(SET01[i].CustShort + ' ' + queryCheck);
                                 if (result.recordset[0].count > 0) {
                                     const now = new Date();
-                                    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
-                                    const currentYear = now.getFullYear().toString();
+                                    const currentMonth = now.getMonth() + 1; // เก็บเป็นตัวเลขเลย 1-12
+                                    const currentYear = now.getFullYear();
+                                    const rowMonth = parseInt(SET01[i].Month, 10);
+                                    const rowYear = parseInt(SET01[i].Year, 10);
                                     // console.log(SET01[i].Month + ' ' + currentMonth + ' ' + SET01[i].Year + ' ' + currentYear);
 
                                     let extraUpdate = '';
-                                    if ((SET01[i].Month === currentMonth && SET01[i].Year === currentYear) || (SET01[i].Month === currentMonth - 1 && SET01[i].Year === currentYear)) {
+                                    if (
+                                        (rowMonth === currentMonth && rowYear === currentYear) ||
+                                        (rowMonth === currentMonth - 1 && rowYear === currentYear)
+                                    ) {
                                         extraUpdate = `
                                         [Type] = '${SET01[i].Type}', 
                                         [MKTGroup] = '${SET01[i].MKTGroup}', 
