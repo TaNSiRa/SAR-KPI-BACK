@@ -201,6 +201,11 @@ router.post('/02SARKPI/Service', async (req, res) => {
                     AND [GROUP] != '' 
                     AND MKTGROUP != '' 
                     AND REPORTITEMS != ''
+                    AND FRE != '-' 
+                    AND TYPE != '-' 
+                    AND [GROUP] != '-' 
+                    AND MKTGROUP != '-' 
+                    AND REPORTITEMS != '-'
             )
             SELECT *
             FROM Ranked
