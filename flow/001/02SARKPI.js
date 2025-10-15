@@ -6342,7 +6342,7 @@ async function loadRoutineKACReport() {
     try {
         const db = await mssql.qurey(query);
         routineKACData = db.recordset || [];
-        // console.log("Routine KAC Report loaded:", routineKACData.length, "records");
+        console.log("Routine KAC Report loaded:", routineKACData.length, "records");
     } catch (error) {
         console.error("Error loading Routine KAC Report data:", error);
         routineKACData = [];
