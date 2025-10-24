@@ -196,7 +196,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
                         ROW_NUMBER() OVER (PARTITION BY t.CustShort ORDER BY t.CustShort) AS rn
                 FROM [SAR].[dbo].[Routine_MasterPatternTS] t
                 WHERE FRE != '' 
-                    AND FRE != '1<' 
+                    AND FRE != '<1' 
                     AND TYPE != '' 
                     AND [GROUP] != '' 
                     AND MKTGROUP != '' 
@@ -2147,7 +2147,7 @@ router.post('/02SARKPI/Service', async (req, res) => {
 //             // `;
 //             const queryMasterPattern = `
 //                 SELECT * From [SAR].[dbo].[Routine_MasterPatternTS]
-//                 WHERE FRE != '' AND FRE != '1<'
+//                 WHERE FRE != '' AND FRE != '<1'
 //                 ORDER BY CustShort;
 //             `;
 //             const dbMaster = await mssql.qurey(queryMasterPattern);
